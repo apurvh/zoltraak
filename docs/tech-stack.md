@@ -3,29 +3,31 @@
 Use this stack:
 
 - Vite + React + TypeScript
-- tldraw SDK
+- Excalidraw React package
+- idb for client-only IndexedDB persistence
 - Playwright for browser-level workflow tests
 - Vitest only for small pure helpers, if needed
 - Vercel static deployment
 
-## Why tldraw
+## Why Excalidraw
 
-Use tldraw instead of Konva or Fabric. The goal is a focused drawing app with minimal custom canvas code, not a canvas engine project.
+Use Excalidraw instead of tldraw, Konva, or Fabric. The goal is a focused drawing app with minimal custom canvas code and a fully open-source production deployment.
 
-tldraw already provides the core editor surface: drawing, text, images and video, copy/paste, undo/redo, zoom, pan, default tools, default shapes, UI, and editor APIs. A single `<Tldraw />` creates a working single-user canvas, and the SDK can be customized for project-specific tools, UI, and behavior. See the [tldraw quick start](https://tldraw.dev/quick-start).
+Excalidraw provides the core editor surface: drawing, arrows, text, images, copy/paste, undo/redo, zoom, pan, default tools, default shapes, UI, and editor APIs. A single `<Excalidraw />` creates a working single-user canvas, and the app can customize behavior with the imperative API. See the [Excalidraw React integration docs](https://excalidraw-excalidraw.mintlify.app/examples).
 
 Keep app code limited to:
 
 - Restricting or removing tools
 - Setting the fixed color palette
 - Customizing the UI
-- Configuring local persistence
+- Managing app-owned pages
+- Configuring local IndexedDB persistence
 - Adding export/import if needed
 - Testing the required workflows
 
-Use `persistenceKey` for client-only IndexedDB persistence. tldraw saves the document locally, stores assets with it, loads on mount, and syncs tabs that share the same key. See [tldraw persistence](https://tldraw.dev/sdk-features/persistence) and [tldraw assets](https://tldraw.dev/docs/assets).
+Use an app-owned document model for pages. Each page stores Excalidraw elements, serializable app state, and files. Persist the document in IndexedDB with `idb` under the `zoltraak-canvas` key.
 
-Do not add Zustand or Dexie at first. Let tldraw own scene state. Add a separate store only for app preferences such as theme, palette choice, or toolbar configuration.
+Do not add Zustand or Dexie at first. Keep the document model in React state and IndexedDB. Add a separate store only for app preferences such as theme, palette choice, or toolbar configuration.
 
 ## Testing
 

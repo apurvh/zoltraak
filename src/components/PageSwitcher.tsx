@@ -1,15 +1,13 @@
 import React from 'react'
-import { type TLPageId, useEditor, useValue } from 'tldraw'
-import {
-	createAndSwitchToPage,
-	getNextPageName,
-	getPageSummaries,
-	type PageSummary,
-} from '../lib/pages'
+import { getNextPageName, type PageSummary } from '../lib/document'
 
 type PageSwitcherProps = {
+	currentPageId: string
 	isOpen: boolean
 	onClose: () => void
+	onCreatePage: (name: string) => void
+	onSwitchPage: (pageId: string) => void
+	pages: PageSummary[]
 }
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
@@ -29,10 +27,14 @@ function getFilteredPageOptions(pages: PageSummary[], query: string) {
 			]
 }
 
-export function PageSwitcher({ isOpen, onClose }: PageSwitcherProps) {
-	const editor = useEditor()
-	const pages = useValue('pages', () => getPageSummaries(editor), [editor])
-	const currentPageId = useValue('current page id', () => editor.getCurrentPageId(), [editor])
+export function PageSwitcher({
+	currentPageId,
+	isOpen,
+	onClose,
+	onCreatePage,
+	onSwitchPage,
+	pages,
+}: PageSwitcherProps) {
 	const [query, setQuery] = React.useState('')
 	const [highlightedIndex, setHighlightedIndex] = React.useState(0)
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
@@ -54,16 +56,16 @@ export function PageSwitcher({ isOpen, onClose }: PageSwitcherProps) {
 	const createPage = React.useCallback(() => {
 		const name = query.trim() || getNextPageName(pages)
 
-		createAndSwitchToPage(editor, name)
+		onCreatePage(name)
 		onClose()
-	}, [editor, onClose, pages, query])
+	}, [onClose, onCreatePage, pages, query])
 
 	const switchToPage = React.useCallback(
-		(pageId: TLPageId) => {
-			editor.setCurrentPage(pageId)
+		(pageId: string) => {
+			onSwitchPage(pageId)
 			onClose()
 		},
-		[editor, onClose]
+		[onClose, onSwitchPage]
 	)
 
 	const selectOption = React.useCallback(

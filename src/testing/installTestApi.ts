@@ -1,5 +1,11 @@
-import { Editor } from 'tldraw'
-import { getPageSummaries } from '../lib/pages'
+import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import { getPageSummaries, type ZoltraakDocument } from '../lib/document'
+
+type TestApiOptions = {
+	getApi: () => ExcalidrawImperativeAPI | null
+	getDocument: () => ZoltraakDocument | null
+	resetDocument: () => Promise<void>
+}
 
 declare global {
 	interface Window {
@@ -9,44 +15,30 @@ declare global {
 			getSelectedShapeIds: () => string[]
 			getCurrentPageId: () => string
 			getPages: () => Array<{ id: string; name: string }>
-			resetDocument: () => void
+			resetDocument: () => Promise<void>
 		}
 	}
 }
 
-function resetDocument(editor: Editor) {
-	editor.run(() => {
-		editor.markHistoryStoppingPoint('reset document')
-		const pages = editor.getPages()
-		const firstPage = pages[0]
-
-		if (!firstPage) return
-
-		editor.setCurrentPage(firstPage.id)
-		for (const page of pages.slice(1)) {
-			editor.deletePage(page.id)
-		}
-
-		editor.updatePage({ id: firstPage.id, name: 'Page 1' })
-		editor.deleteShapes([...editor.getCurrentPageShapeIds()])
-	})
-}
-
-export function installTestApi(editor: Editor) {
+export function installTestApi({ getApi, getDocument, resetDocument }: TestApiOptions) {
 	if (!import.meta.env.DEV) return
 
 	window.__zoltraakTestApi = {
-		getCurrentToolId: () => editor.getCurrentToolId(),
+		getCurrentToolId: () => getApi()?.getAppState().activeTool.type ?? '',
 		getShapes: () =>
-			editor.getCurrentPageShapesSorted().map((shape) => ({
-				id: shape.id,
-				type: shape.type,
-				props: shape.props as Record<string, unknown>,
+			(getApi()?.getSceneElements() ?? []).map((element) => ({
+				id: element.id,
+				type: element.type,
+				props: { ...element },
 			})),
-		getSelectedShapeIds: () => [...editor.getSelectedShapeIds()],
-		getCurrentPageId: () => editor.getCurrentPageId(),
-		getPages: () => getPageSummaries(editor),
-		resetDocument: () => resetDocument(editor),
+		getSelectedShapeIds: () => Object.keys(getApi()?.getAppState().selectedElementIds ?? {}),
+		getCurrentPageId: () => getDocument()?.currentPageId ?? '',
+		getPages: () => {
+			const document = getDocument()
+
+			return document ? getPageSummaries(document) : []
+		},
+		resetDocument,
 	}
 }
 

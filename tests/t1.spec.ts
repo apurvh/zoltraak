@@ -8,7 +8,7 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
 
 	await page.keyboard.press('r')
-	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getCurrentToolId())).toBe('geo')
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getCurrentToolId())).toBe('rectangle')
 	await page.mouse.move(220, 180)
 	await page.mouse.down()
 	await page.mouse.move(420, 320)
@@ -19,7 +19,7 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 			page.evaluate(() =>
 				window.__zoltraakTestApi
 					?.getShapes()
-					.some((shape) => shape.type === 'geo' && shape.props.geo === 'rectangle')
+					.some((shape) => shape.type === 'rectangle')
 			)
 		)
 		.toBe(true)
