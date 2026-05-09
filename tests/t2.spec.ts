@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('T2: Command+K creates and switches between tldraw pages', async ({ page }) => {
+test('T2: Command+K creates and switches between Excalidraw pages', async ({ page }) => {
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
@@ -27,4 +27,32 @@ test('T2: Command+K creates and switches between tldraw pages', async ({ page })
 	await expect
 		.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getCurrentPageId()))
 		.toBe(initialPageId)
+})
+
+test('T2: pages and active page persist after reload', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: /Create new page/ }).click()
+
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
+
+	const currentPageId = await page.evaluate(() => window.__zoltraakTestApi!.getCurrentPageId())
+
+	await page.reload()
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getPages().length)).toBe(2)
+	await expect
+		.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getCurrentPageId()))
+		.toBe(currentPageId)
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
 })

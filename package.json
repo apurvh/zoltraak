@@ -9,9 +9,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "idb": "^8.0.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tldraw": "^5.0.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

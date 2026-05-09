@@ -10,7 +10,7 @@ Use keyboard shortcuts to switch drawing modes:
 
 ## T2 - Lightweight Page Switcher
 
-Use a command palette to switch between tldraw pages:
+Use a command palette to switch between Excalidraw-backed pages:
 
 - Press `Command+K` to open the page switcher.
 - Search filters the existing pages.
