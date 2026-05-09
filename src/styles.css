@@ -1,0 +1,102 @@
+:root {
+	font-family:
+		Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	color: #1d1d1f;
+	background: #f7f7f4;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	min-width: 320px;
+	min-height: 100vh;
+}
+
+#root {
+	min-height: 100vh;
+}
+
+.app-shell {
+	position: fixed;
+	inset: 0;
+	min-height: 100vh;
+}
+
+.page-switcher-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 1000;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: min(18vh, 120px);
+	background: rgb(29 29 31 / 18%);
+}
+
+.page-switcher {
+	width: min(560px, calc(100vw - 32px));
+	overflow: hidden;
+	border: 1px solid rgb(20 20 20 / 14%);
+	border-radius: 8px;
+	background: #ffffff;
+	box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
+}
+
+.page-switcher__input {
+	width: 100%;
+	height: 52px;
+	border: 0;
+	border-bottom: 1px solid rgb(20 20 20 / 10%);
+	padding: 0 16px;
+	outline: none;
+	color: #1d1d1f;
+	font: inherit;
+	font-size: 16px;
+}
+
+.page-switcher__input::placeholder {
+	color: #707075;
+}
+
+.page-switcher__list {
+	max-height: min(360px, calc(100vh - 220px));
+	overflow-y: auto;
+	padding: 6px;
+}
+
+.page-switcher__option {
+	display: flex;
+	width: 100%;
+	min-height: 40px;
+	align-items: center;
+	justify-content: space-between;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: #1d1d1f;
+	cursor: pointer;
+	font: inherit;
+	text-align: left;
+}
+
+.page-switcher__option[aria-selected='true'] {
+	background: #f0f0ed;
+}
+
+.page-switcher__option-title {
+	min-width: 0;
+	overflow: hidden;
+	padding: 0 10px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.page-switcher__option-meta {
+	flex: 0 0 auto;
+	padding: 0 10px;
+	color: #707075;
+	font-size: 12px;
+}
