@@ -56,3 +56,53 @@ test('T2: pages and active page persist after reload', async ({ page }) => {
 		.toBe(currentPageId)
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
 })
+
+test('T2: Command+K opens page switcher after drawing on the canvas', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+
+	await page.keyboard.press('Meta+K')
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
+})
+
+test('T2: Command+K opens page switcher from focused editor content', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+	await page.evaluate(() => {
+		const editorRoot = document.createElement('div')
+
+		editorRoot.tabIndex = 0
+		editorRoot.addEventListener('keydown', (event) => event.stopPropagation())
+		document.querySelector('main')?.append(editorRoot)
+		editorRoot.focus()
+	})
+
+	await page.keyboard.press('Meta+K')
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
+})
+
+test('T2: Escape and outside click close the page switcher', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
+
+	await page.keyboard.press('Escape')
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeHidden()
+
+	await page.keyboard.press('Meta+K')
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
+
+	await page.mouse.click(20, 20)
+	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeHidden()
+})

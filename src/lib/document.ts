@@ -7,7 +7,7 @@ const DB_VERSION = 1
 const DOCUMENT_STORE = 'documents'
 const DOCUMENT_KEY = 'zoltraak-canvas'
 
-type StoredAppState = Partial<
+export type StoredAppState = Partial<
 	Pick<
 		AppState,
 		| 'currentItemBackgroundColor'
@@ -158,11 +158,4 @@ export async function loadDocument() {
 export async function saveDocument(document: ZoltraakDocument) {
 	const db = await getDb()
 	await db.put(DOCUMENT_STORE, document, DOCUMENT_KEY)
-}
-
-export async function resetStoredDocument() {
-	const document = createDefaultDocument()
-	await saveDocument(document)
-
-	return document
 }

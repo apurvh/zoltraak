@@ -1,69 +1,51 @@
 import React from 'react'
-import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw'
+import { Excalidraw } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { PageSwitcher } from './components/PageSwitcher'
+import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
+import { useZoltraakDocument } from './hooks/useZoltraakDocument'
 import {
 	createBlankPage,
 	getCurrentPage,
 	getPageSummaries,
-	loadDocument,
-	resetStoredDocument,
-	saveDocument,
 	serializeAppState,
 	withPageScene,
 	type ZoltraakDocument,
 	type ZoltraakPage,
 } from './lib/document'
+import {
+	loadPageIntoApi as loadExcalidrawPage,
+	pageInitialData,
+	sceneFromApi,
+} from './lib/excalidrawScene'
 import { installTestApi, uninstallTestApi } from './testing/installTestApi'
 
-function isTextInputTarget(target: EventTarget | null) {
-	if (!(target instanceof HTMLElement)) return false
-
-	return (
-		target.isContentEditable ||
-		target instanceof HTMLInputElement ||
-		target instanceof HTMLTextAreaElement ||
-		target instanceof HTMLSelectElement
-	)
-}
-
-function pageInitialData(page: ZoltraakPage) {
-	return {
-		elements: page.elements,
-		appState: page.appState,
-		files: page.files,
-		scrollToContent: false,
-	}
-}
-
-function pageUpdateAppState(page: ZoltraakPage) {
-	return {
-		...page.appState,
-		selectedElementIds: {},
-	} as Parameters<ExcalidrawImperativeAPI['updateScene']>[0]['appState']
-}
-
-function sceneFromApi(api: ExcalidrawImperativeAPI) {
-	return {
-		elements: api.getSceneElements(),
-		appState: serializeAppState(api.getAppState()),
-		files: api.getFiles(),
-	}
-}
-
 export function App() {
-	const [document, setDocument] = React.useState<ZoltraakDocument | null>(null)
 	const [api, setApi] = React.useState<ExcalidrawImperativeAPI | null>(null)
 	const [isPageSwitcherOpen, setIsPageSwitcherOpen] = React.useState(false)
-	const documentRef = React.useRef<ZoltraakDocument | null>(null)
 	const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
-	const saveChainRef = React.useRef<Promise<void>>(Promise.resolve())
+	const { document, documentRef, persistDocument, resetDocument, updatePageScene } =
+		useZoltraakDocument()
 
-	const persistDocument = React.useCallback((nextDocument: ZoltraakDocument) => {
-		documentRef.current = nextDocument
-		setDocument(nextDocument)
-		saveChainRef.current = saveChainRef.current.then(() => saveDocument(nextDocument))
+	React.useEffect(() => {
+		apiRef.current = api
+	}, [api])
+
+	const openPageSwitcher = React.useCallback(() => {
+		setIsPageSwitcherOpen(true)
+	}, [])
+
+	useCanvasShortcuts({
+		apiRef,
+		onOpenPageSwitcher: openPageSwitcher,
+	})
+
+	const loadPageIntoCurrentApi = React.useCallback((page: ZoltraakPage) => {
+		const currentApi = apiRef.current
+		if (!currentApi) return
+
+		loadExcalidrawPage(currentApi, page)
 	}, [])
 
 	const syncCurrentPageFromApi = React.useCallback((sourceDocument: ZoltraakDocument) => {
@@ -81,83 +63,15 @@ export function App() {
 		)
 	}, [])
 
-	const loadPageIntoApi = React.useCallback((page: ZoltraakPage) => {
-		const currentApi = apiRef.current
-		if (!currentApi) return
-
-		currentApi.addFiles(Object.values(page.files))
-		currentApi.updateScene({
-			elements: page.elements,
-			appState: pageUpdateAppState(page),
-			captureUpdate: CaptureUpdateAction.NEVER,
-		})
-		currentApi.history.clear()
-	}, [])
-
-	React.useEffect(() => {
-		let isMounted = true
-
-		loadDocument().then((loadedDocument) => {
-			if (!isMounted) return
-			documentRef.current = loadedDocument
-			setDocument(loadedDocument)
-		})
-
-		return () => {
-			isMounted = false
-		}
-	}, [])
-
-	React.useEffect(() => {
-		apiRef.current = api
-	}, [api])
-
-	React.useEffect(() => {
-		function handleKeyDown(event: KeyboardEvent) {
-			if (isTextInputTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey) return
-
-			if (event.key === 'r') {
-				event.preventDefault()
-				apiRef.current?.setActiveTool({ type: 'rectangle' })
-				return
-			}
-
-			if (event.key === 'a') {
-				event.preventDefault()
-				apiRef.current?.setActiveTool({ type: 'arrow' })
-			}
-		}
-
-		window.addEventListener('keydown', handleKeyDown)
-
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [])
-
-	React.useEffect(() => {
-		function handlePageSwitcherShortcut(event: KeyboardEvent) {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-				event.preventDefault()
-				setIsPageSwitcherOpen(true)
-			}
-		}
-
-		window.addEventListener('keydown', handlePageSwitcherShortcut)
-
-		return () => window.removeEventListener('keydown', handlePageSwitcherShortcut)
-	}, [])
-
 	React.useEffect(() => {
 		installTestApi({
 			getApi: () => apiRef.current,
 			getDocument: () => documentRef.current,
 			resetDocument: async () => {
-				const nextDocument = await resetStoredDocument()
-				documentRef.current = nextDocument
-				setDocument(nextDocument)
-
+				const nextDocument = await resetDocument()
 				const page = getCurrentPage(nextDocument)
 				if (page) {
-					loadPageIntoApi(page)
+					loadPageIntoCurrentApi(page)
 				}
 			},
 		})
@@ -165,7 +79,7 @@ export function App() {
 		return () => {
 			uninstallTestApi()
 		}
-	}, [loadPageIntoApi])
+	}, [documentRef, loadPageIntoCurrentApi, resetDocument])
 
 	const closePageSwitcher = React.useCallback(() => {
 		setIsPageSwitcherOpen(false)
@@ -180,17 +94,14 @@ export function App() {
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
-			persistDocument(
-				withPageScene(
-					currentDocument,
-					currentDocument.currentPageId,
-					elements,
-					serializeAppState(appState),
-					files
-				)
+			updatePageScene(
+				currentDocument.currentPageId,
+				elements,
+				serializeAppState(appState),
+				files
 			)
 		},
-		[persistDocument]
+		[documentRef, updatePageScene]
 	)
 
 	const switchPage = React.useCallback(
@@ -208,9 +119,9 @@ export function App() {
 			}
 
 			persistDocument(nextDocument)
-			loadPageIntoApi(targetPage)
+			loadPageIntoCurrentApi(targetPage)
 		},
-		[loadPageIntoApi, persistDocument, syncCurrentPageFromApi]
+		[documentRef, loadPageIntoCurrentApi, persistDocument, syncCurrentPageFromApi]
 	)
 
 	const createPage = React.useCallback(
@@ -227,9 +138,9 @@ export function App() {
 			}
 
 			persistDocument(nextDocument)
-			loadPageIntoApi(page)
+			loadPageIntoCurrentApi(page)
 		},
-		[loadPageIntoApi, persistDocument, syncCurrentPageFromApi]
+		[documentRef, loadPageIntoCurrentApi, persistDocument, syncCurrentPageFromApi]
 	)
 
 	if (!document) {
