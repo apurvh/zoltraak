@@ -25,6 +25,11 @@ body {
 	min-height: 100vh;
 }
 
+.app-shell .excalidraw .App-toolbar,
+.app-shell .excalidraw .HintViewer {
+	display: none;
+}
+
 .page-switcher-backdrop {
 	position: fixed;
 	inset: 0;
