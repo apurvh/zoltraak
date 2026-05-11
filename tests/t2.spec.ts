@@ -78,7 +78,7 @@ test('T2: Command+K opens Excalidraw Mermaid dialog', async ({ page }) => {
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
 
 	await page.keyboard.press('Meta+K')
-	await page.getByRole('option', { name: 'Mermaid to Excalidraw' }).click()
+	await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
 
 	const mermaidDialog = page.getByRole('dialog').filter({ hasText: 'Mermaid to Excalidraw' })
 

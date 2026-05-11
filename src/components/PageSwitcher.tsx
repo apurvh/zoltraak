@@ -15,7 +15,7 @@ type PageSwitcherProps = {
 type CommandOption = { type: 'command'; id: 'mermaid-to-excalidraw'; label: string }
 
 const commandOptions: CommandOption[] = [
-	{ type: 'command', id: 'mermaid-to-excalidraw', label: 'Mermaid to Excalidraw' },
+	{ type: 'command', id: 'mermaid-to-excalidraw', label: 'Insert Mermaid diagram' },
 ]
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
