@@ -33,28 +33,55 @@ export async function renderMermaidToSvg(source: string): Promise<{
 
 	let width = 400
 	let height = 300
+	let finalSvg = svg
 
 	if (svgEl) {
 		const viewBox = svgEl.getAttribute('viewBox')
+		const PADDING = 30
+
+		let viewBoxExists = false
 
 		if (viewBox) {
 			const parts = viewBox.split(/[\s,]+/).map(Number)
 			if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+				parts[0] -= PADDING
+				parts[1] -= PADDING
+				parts[2] += PADDING * 2
+				parts[3] += PADDING * 2
+
 				width = parts[2]
 				height = parts[3]
+				svgEl.setAttribute('viewBox', parts.join(' '))
+				viewBoxExists = true
 			}
 		}
 
-		const attrWidth = parseFloat(svgEl.getAttribute('width') ?? '')
-		const attrHeight = parseFloat(svgEl.getAttribute('height') ?? '')
+		if (!viewBoxExists) {
+			const attrWidth = parseFloat(svgEl.getAttribute('width') ?? '')
+			const attrHeight = parseFloat(svgEl.getAttribute('height') ?? '')
 
-		if (attrWidth > 0 && attrHeight > 0) {
-			width = attrWidth
-			height = attrHeight
+			if (attrWidth > 0 && attrHeight > 0) {
+				width = attrWidth + PADDING * 2
+				height = attrHeight + PADDING * 2
+			}
 		}
+
+		svgEl.setAttribute('width', width.toString())
+		svgEl.setAttribute('height', height.toString())
+
+		// Remove max-width constraints that might conflict with canvas scaling
+		const currentStyle = svgEl.getAttribute('style') || ''
+		const newStyle = currentStyle.replace(/max-width:\s*[^;]+;?/g, '').trim()
+		if (newStyle) {
+			svgEl.setAttribute('style', newStyle)
+		} else {
+			svgEl.removeAttribute('style')
+		}
+
+		finalSvg = svgEl.outerHTML
 	}
 
-	return { svg, width, height }
+	return { svg: finalSvg, width, height }
 }
 
 export function svgToDataUrl(svg: string): string {
