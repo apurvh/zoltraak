@@ -1,5 +1,6 @@
 import React from 'react'
 import { getNextPageName, type PageSummary } from '../lib/document'
+import { FileIcon, FilePlusIcon, WandIcon } from './icons'
 
 type PageSwitcherProps = {
 	currentPageId: string
@@ -12,11 +13,6 @@ type PageSwitcherProps = {
 }
 
 type CommandOption = { type: 'command'; id: 'mermaid-to-excalidraw'; label: string }
-
-type PageSwitcherOption =
-	| CommandOption
-	| { type: 'create'; page: null }
-	| { type: 'page'; page: PageSummary }
 
 const commandOptions: CommandOption[] = [
 	{ type: 'command', id: 'mermaid-to-excalidraw', label: 'Mermaid to Excalidraw' },
@@ -43,6 +39,38 @@ function getFilteredPageOptions(pages: PageSummary[], query: string) {
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 			]
 }
+
+// --- Shared option button to reduce duplication across option types ---
+
+type OptionButtonProps = {
+	icon: React.ReactNode
+	isHighlighted: boolean
+	label: string
+	meta?: React.ReactNode
+	onClick: () => void
+	onMouseEnter: () => void
+}
+
+function OptionButton({ icon, isHighlighted, label, meta, onClick, onMouseEnter }: OptionButtonProps) {
+	return (
+		<button
+			aria-selected={isHighlighted}
+			className="page-switcher__option"
+			onClick={onClick}
+			onMouseEnter={onMouseEnter}
+			role="option"
+			type="button"
+		>
+			<div className="page-switcher__option-content">
+				{icon}
+				<span className="page-switcher__option-title">{label}</span>
+			</div>
+			{meta}
+		</button>
+	)
+}
+
+// --- Main component ---
 
 export function PageSwitcher({
 	currentPageId,
@@ -111,6 +139,13 @@ export function PageSwitcher({
 
 	if (!isOpen) return null
 
+	const firstPageIndex = options.findIndex((o) => o.type === 'page')
+
+	const handleMouseEnter = (index: number) => {
+		hasNavigatedOptionsRef.current = true
+		setHighlightedIndex(index)
+	}
+
 	return (
 		<div className="page-switcher-backdrop" onMouseDown={onClose}>
 			<div
@@ -161,65 +196,56 @@ export function PageSwitcher({
 				<div aria-label="Pages" className="page-switcher__list" role="listbox">
 					{options.map((option, index) => {
 						const isHighlighted = index === highlightedIndex
+						const showPagesHeading = index === firstPageIndex
+
+						let key: string
+						let optionButton: React.ReactNode
 
 						if (option.type === 'command') {
-							return (
-								<button
-									aria-selected={isHighlighted}
-									className="page-switcher__option"
-									key={option.id}
+							key = option.id
+							optionButton = (
+								<OptionButton
+									icon={<WandIcon className="page-switcher__icon" />}
+									isHighlighted={isHighlighted}
+									label={option.label}
 									onClick={openMermaidToExcalidraw}
-									onMouseEnter={() => {
-										hasNavigatedOptionsRef.current = true
-										setHighlightedIndex(index)
-									}}
-									role="option"
-									type="button"
-								>
-									<span className="page-switcher__option-title">{option.label}</span>
-								</button>
+									onMouseEnter={() => handleMouseEnter(index)}
+								/>
 							)
-						}
-
-						if (option.type === 'create') {
-							const label = query.trim() ? `Create new page "${query.trim()}"` : 'Create new page'
-
-							return (
-								<button
-									aria-selected={isHighlighted}
-									className="page-switcher__option"
-									key="create"
+						} else if (option.type === 'create') {
+							key = 'create'
+							optionButton = (
+								<OptionButton
+									icon={<FilePlusIcon className="page-switcher__icon" />}
+									isHighlighted={isHighlighted}
+									label={query.trim() ? `Create new page "${query.trim()}"` : 'Create new page'}
 									onClick={createPage}
-									onMouseEnter={() => {
-										hasNavigatedOptionsRef.current = true
-										setHighlightedIndex(index)
-									}}
-									role="option"
-									type="button"
-								>
-									<span className="page-switcher__option-title">{label}</span>
-								</button>
+									onMouseEnter={() => handleMouseEnter(index)}
+								/>
+							)
+						} else {
+							key = option.page.id
+							optionButton = (
+								<OptionButton
+									icon={<FileIcon className="page-switcher__icon" />}
+									isHighlighted={isHighlighted}
+									label={option.page.name}
+									meta={
+										option.page.id === currentPageId ? (
+											<span className="page-switcher__option-meta">Current</span>
+										) : undefined
+									}
+									onClick={() => switchToPage(option.page.id)}
+									onMouseEnter={() => handleMouseEnter(index)}
+								/>
 							)
 						}
-
-						const isCurrent = option.page.id === currentPageId
 
 						return (
-							<button
-								aria-selected={isHighlighted}
-								className="page-switcher__option"
-								key={option.page.id}
-								onClick={() => switchToPage(option.page.id)}
-								onMouseEnter={() => {
-									hasNavigatedOptionsRef.current = true
-									setHighlightedIndex(index)
-								}}
-								role="option"
-								type="button"
-							>
-								<span className="page-switcher__option-title">{option.page.name}</span>
-								{isCurrent && <span className="page-switcher__option-meta">Current</span>}
-							</button>
+							<React.Fragment key={key}>
+								{showPagesHeading && <div className="page-switcher__heading">Pages</div>}
+								{optionButton}
+							</React.Fragment>
 						)
 					})}
 				</div>

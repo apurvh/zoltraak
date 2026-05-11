@@ -91,12 +91,37 @@ body {
 	background: #f0f0ed;
 }
 
+.page-switcher__option-content {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	padding: 0 10px;
+}
+
+.page-switcher__icon {
+	flex: 0 0 auto;
+	margin-right: 12px;
+	color: #707075;
+}
+
+.page-switcher__option[aria-selected='true'] .page-switcher__icon {
+	color: #1d1d1f;
+}
+
 .page-switcher__option-title {
 	min-width: 0;
 	overflow: hidden;
-	padding: 0 10px;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.page-switcher__heading {
+	padding: 12px 10px 4px 10px;
+	font-size: 12px;
+	font-weight: 500;
+	color: #707075;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .page-switcher__option-meta {
