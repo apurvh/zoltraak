@@ -16,7 +16,7 @@ import {
 } from './lib/document'
 import {
 	loadPageIntoApi as loadExcalidrawPage,
-	normalizeRectangleDefaults,
+	normalizeSceneDefaults,
 	pageInitialData,
 	sceneFromApi,
 } from './lib/excalidrawScene'
@@ -95,7 +95,7 @@ export function App() {
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
-			const normalizedScene = normalizeRectangleDefaults(elements)
+			const normalizedScene = normalizeSceneDefaults(elements)
 
 			updatePageScene(
 				currentDocument.currentPageId,

@@ -1,5 +1,6 @@
 import React from 'react'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import { DEFAULT_ARROWHEAD, SHAPE_ROUGHNESS } from '../lib/excalidrawScene'
 
 type UseCanvasShortcutsOptions = {
 	apiRef: React.RefObject<ExcalidrawImperativeAPI | null>
@@ -26,7 +27,7 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 				event.preventDefault()
 				apiRef.current?.updateScene({
 					appState: {
-						currentItemRoughness: 0,
+						currentItemRoughness: SHAPE_ROUGHNESS,
 						currentItemRoundness: 'round',
 					},
 				})
@@ -36,6 +37,12 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 
 			if (event.key === 'a') {
 				event.preventDefault()
+				apiRef.current?.updateScene({
+					appState: {
+						currentItemEndArrowhead: DEFAULT_ARROWHEAD,
+						currentItemRoughness: SHAPE_ROUGHNESS,
+					},
+				})
 				apiRef.current?.setActiveTool({ type: 'arrow' })
 			}
 		}

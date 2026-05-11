@@ -3,7 +3,9 @@ import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { serializeAppState, type ZoltraakPage } from './document'
 
+export const SHAPE_ROUGHNESS = 0.5
 export const RECTANGLE_CORNER_RADIUS = 6.4
+export const DEFAULT_ARROWHEAD = 'triangle_outline'
 
 const subtleRectangleRoundness = {
 	type: ROUNDNESS.ADAPTIVE_RADIUS,
@@ -44,23 +46,38 @@ export function loadPageIntoApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage
 	api.history.clear()
 }
 
-export function normalizeRectangleDefaults(elements: readonly ExcalidrawElement[]) {
+export function normalizeSceneDefaults(elements: readonly ExcalidrawElement[]) {
 	let changed = false
 	const normalizedElements = elements.map((element) => {
-		if (
-			element.type !== 'rectangle' ||
-			(element.roughness === 0 &&
+		if (element.type === 'rectangle') {
+			if (
+				element.roughness === SHAPE_ROUGHNESS &&
 				element.roundness?.type === subtleRectangleRoundness.type &&
-				element.roundness.value === subtleRectangleRoundness.value)
-		) {
-			return element
+				element.roundness.value === subtleRectangleRoundness.value
+			) {
+				return element
+			}
+
+			changed = true
+			return newElementWith(element, {
+				roughness: SHAPE_ROUGHNESS,
+				roundness: subtleRectangleRoundness,
+			})
 		}
 
-		changed = true
-		return newElementWith(element, {
-			roughness: 0,
-			roundness: subtleRectangleRoundness,
-		})
+		if (element.type === 'arrow') {
+			if (element.roughness === SHAPE_ROUGHNESS && element.endArrowhead === DEFAULT_ARROWHEAD) {
+				return element
+			}
+
+			changed = true
+			return newElementWith(element, {
+				endArrowhead: DEFAULT_ARROWHEAD,
+				roughness: SHAPE_ROUGHNESS,
+			})
+		}
+
+		return element
 	})
 
 	return {

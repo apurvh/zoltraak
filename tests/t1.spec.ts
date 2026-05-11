@@ -37,7 +37,7 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 				}
 			})
 		)
-		.toEqual({ roughness: 0, roundness: { type: 3, value: 6.4 } })
+		.toEqual({ roughness: 0.5, roundness: { type: 3, value: 6.4 } })
 
 	await page.keyboard.press('r')
 	await page.mouse.move(520, 160)
@@ -58,8 +58,8 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 			)
 		)
 		.toEqual([
-			{ roughness: 0, roundness: { type: 3, value: 6.4 } },
-			{ roughness: 0, roundness: { type: 3, value: 6.4 } },
+			{ roughness: 0.5, roundness: { type: 3, value: 6.4 } },
+			{ roughness: 0.5, roundness: { type: 3, value: 6.4 } },
 		])
 
 	await page.keyboard.press('a')
@@ -76,6 +76,29 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 			)
 		)
 		.toBe(true)
+
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const arrow = window.__zoltraakTestApi
+					?.getShapes()
+					.find((shape) => shape.type === 'arrow')
+				const points = arrow?.props.points as Array<[number, number]> | undefined
+				const startPoint = points?.at(0)
+				const endPoint = points?.at(-1)
+				const arrowLength =
+					startPoint && endPoint
+						? Math.hypot(endPoint[0] - startPoint[0], endPoint[1] - startPoint[1])
+						: null
+
+				return {
+					endArrowhead: arrow?.props.endArrowhead,
+					hasVisibleLength: arrowLength !== null && arrowLength > 100,
+					roughness: arrow?.props.roughness,
+				}
+			})
+		)
+		.toEqual({ endArrowhead: 'triangle_outline', hasVisibleLength: true, roughness: 0.5 })
 
 	const selectedShapeIds = await page.evaluate(() => window.__zoltraakTestApi?.getSelectedShapeIds() ?? [])
 	expect(selectedShapeIds.length).toBeGreaterThan(0)
