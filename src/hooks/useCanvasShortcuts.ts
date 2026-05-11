@@ -24,6 +24,12 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 
 			if (event.key === 'r') {
 				event.preventDefault()
+				apiRef.current?.updateScene({
+					appState: {
+						currentItemRoughness: 0,
+						currentItemRoundness: 'round',
+					},
+				})
 				apiRef.current?.setActiveTool({ type: 'rectangle' })
 				return
 			}

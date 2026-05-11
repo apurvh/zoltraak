@@ -24,6 +24,44 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 		)
 		.toBe(true)
 
+	await expect
+		.poll(() =>
+			page.evaluate(() => {
+				const rectangle = window.__zoltraakTestApi
+					?.getShapes()
+					.find((shape) => shape.type === 'rectangle')
+
+				return {
+					roughness: rectangle?.props.roughness,
+					roundness: rectangle?.props.roundness ?? null,
+				}
+			})
+		)
+		.toEqual({ roughness: 0, roundness: { type: 3, value: 6.4 } })
+
+	await page.keyboard.press('r')
+	await page.mouse.move(520, 160)
+	await page.mouse.down()
+	await page.mouse.move(900, 520)
+	await page.mouse.up()
+
+	await expect
+		.poll(() =>
+			page.evaluate(() =>
+				window.__zoltraakTestApi
+					?.getShapes()
+					.filter((shape) => shape.type === 'rectangle')
+					.map((shape) => ({
+						roughness: shape.props.roughness,
+						roundness: shape.props.roundness ?? null,
+					}))
+			)
+		)
+		.toEqual([
+			{ roughness: 0, roundness: { type: 3, value: 6.4 } },
+			{ roughness: 0, roundness: { type: 3, value: 6.4 } },
+		])
+
 	await page.keyboard.press('a')
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getCurrentToolId())).toBe('arrow')
 	await page.mouse.move(500, 220)
@@ -51,5 +89,5 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 				selectedCount: window.__zoltraakTestApi?.getSelectedShapeIds().length ?? -1,
 			}))
 		)
-		.toEqual({ shapeCount: 1, selectedCount: 0 })
+		.toEqual({ shapeCount: 2, selectedCount: 0 })
 })

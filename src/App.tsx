@@ -1,5 +1,5 @@
 import React from 'react'
-import { Excalidraw } from '@excalidraw/excalidraw'
+import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import { PageSwitcher } from './components/PageSwitcher'
@@ -16,6 +16,7 @@ import {
 } from './lib/document'
 import {
 	loadPageIntoApi as loadExcalidrawPage,
+	normalizeRectangleDefaults,
 	pageInitialData,
 	sceneFromApi,
 } from './lib/excalidrawScene'
@@ -94,12 +95,21 @@ export function App() {
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
+			const normalizedScene = normalizeRectangleDefaults(elements)
+
 			updatePageScene(
 				currentDocument.currentPageId,
-				elements,
+				normalizedScene.elements,
 				serializeAppState(appState),
 				files
 			)
+
+			if (normalizedScene.changed && !appState.newElement) {
+				apiRef.current?.updateScene({
+					elements: normalizedScene.elements,
+					captureUpdate: CaptureUpdateAction.NEVER,
+				})
+			}
 		},
 		[documentRef, updatePageScene]
 	)

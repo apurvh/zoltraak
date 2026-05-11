@@ -16,6 +16,7 @@ export type StoredAppState = Partial<
 		| 'currentItemFontSize'
 		| 'currentItemOpacity'
 		| 'currentItemRoughness'
+		| 'currentItemRoundness'
 		| 'currentItemStrokeColor'
 		| 'currentItemStrokeStyle'
 		| 'currentItemStrokeWidth'
@@ -66,6 +67,8 @@ export function createBlankPage(name: string): ZoltraakPage {
 		name,
 		elements: [],
 		appState: {
+			currentItemRoughness: 0,
+			currentItemRoundness: 'round',
 			viewBackgroundColor: '#ffffff',
 		},
 		files: {},
@@ -109,6 +112,7 @@ export function serializeAppState(appState: AppState): StoredAppState {
 		currentItemFontSize: appState.currentItemFontSize,
 		currentItemOpacity: appState.currentItemOpacity,
 		currentItemRoughness: appState.currentItemRoughness,
+		currentItemRoundness: appState.currentItemRoundness,
 		currentItemStrokeColor: appState.currentItemStrokeColor,
 		currentItemStrokeStyle: appState.currentItemStrokeStyle,
 		currentItemStrokeWidth: appState.currentItemStrokeWidth,
