@@ -72,6 +72,20 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
 })
 
+test('T2: Command+K opens Excalidraw Mermaid dialog', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: 'Mermaid to Excalidraw' }).click()
+
+	const mermaidDialog = page.getByRole('dialog').filter({ hasText: 'Mermaid to Excalidraw' })
+
+	await expect(mermaidDialog).toBeVisible()
+	await expect(mermaidDialog.getByRole('textbox', { name: /Write Mermaid diagram/i })).toBeVisible()
+})
+
 test('T2: Command+K opens page switcher from focused editor content', async ({ page }) => {
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)

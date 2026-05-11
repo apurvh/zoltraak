@@ -86,6 +86,14 @@ export function App() {
 		setIsPageSwitcherOpen(false)
 	}, [])
 
+	const openMermaidToExcalidraw = React.useCallback(() => {
+		apiRef.current?.updateScene({
+			appState: {
+				openDialog: { name: 'ttd', tab: 'mermaid' },
+			},
+		})
+	}, [])
+
 	const handleChange = React.useCallback(
 		(
 			elements: readonly ExcalidrawElement[],
@@ -171,6 +179,7 @@ export function App() {
 				isOpen={isPageSwitcherOpen}
 				onClose={closePageSwitcher}
 				onCreatePage={createPage}
+				onOpenMermaidToExcalidraw={openMermaidToExcalidraw}
 				onSwitchPage={switchPage}
 				pages={getPageSummaries(document)}
 			/>

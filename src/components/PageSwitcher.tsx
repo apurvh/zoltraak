@@ -6,22 +6,39 @@ type PageSwitcherProps = {
 	isOpen: boolean
 	onClose: () => void
 	onCreatePage: (name: string) => void
+	onOpenMermaidToExcalidraw: () => void
 	onSwitchPage: (pageId: string) => void
 	pages: PageSummary[]
 }
+
+type CommandOption = { type: 'command'; id: 'mermaid-to-excalidraw'; label: string }
+
+type PageSwitcherOption =
+	| CommandOption
+	| { type: 'create'; page: null }
+	| { type: 'page'; page: PageSummary }
+
+const commandOptions: CommandOption[] = [
+	{ type: 'command', id: 'mermaid-to-excalidraw', label: 'Mermaid to Excalidraw' },
+]
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
 	const normalizedQuery = query.trim().toLowerCase()
 	const filteredPages = normalizedQuery
 		? pages.filter((page) => page.name.toLowerCase().includes(normalizedQuery))
 		: pages
+	const filteredCommands = normalizedQuery
+		? commandOptions.filter((command) => command.label.toLowerCase().includes(normalizedQuery))
+		: commandOptions
 
 	return normalizedQuery
 		? [
+				...filteredCommands,
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 				{ type: 'create' as const, page: null },
 			]
 		: [
+				...commandOptions,
 				{ type: 'create' as const, page: null },
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 			]
@@ -32,11 +49,13 @@ export function PageSwitcher({
 	isOpen,
 	onClose,
 	onCreatePage,
+	onOpenMermaidToExcalidraw,
 	onSwitchPage,
 	pages,
 }: PageSwitcherProps) {
 	const [query, setQuery] = React.useState('')
 	const [highlightedIndex, setHighlightedIndex] = React.useState(0)
+	const hasNavigatedOptionsRef = React.useRef(false)
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
 
 	React.useEffect(() => {
@@ -44,6 +63,7 @@ export function PageSwitcher({
 
 		setQuery('')
 		setHighlightedIndex(0)
+		hasNavigatedOptionsRef.current = false
 		window.requestAnimationFrame(() => inputRef.current?.focus())
 	}, [isOpen])
 
@@ -68,6 +88,11 @@ export function PageSwitcher({
 		[onClose, onSwitchPage]
 	)
 
+	const openMermaidToExcalidraw = React.useCallback(() => {
+		onClose()
+		onOpenMermaidToExcalidraw()
+	}, [onClose, onOpenMermaidToExcalidraw])
+
 	const selectOption = React.useCallback(
 		(index: number) => {
 			const option = options[index]
@@ -75,11 +100,13 @@ export function PageSwitcher({
 
 			if (option.type === 'create') {
 				createPage()
+			} else if (option.type === 'command') {
+				openMermaidToExcalidraw()
 			} else {
 				switchToPage(option.page.id)
 			}
 		},
-		[createPage, options, switchToPage]
+		[createPage, openMermaidToExcalidraw, options, switchToPage]
 	)
 
 	if (!isOpen) return null
@@ -99,6 +126,7 @@ export function PageSwitcher({
 					onChange={(event) => {
 						setQuery(event.currentTarget.value)
 						setHighlightedIndex(0)
+						hasNavigatedOptionsRef.current = false
 					}}
 					onKeyDown={(event) => {
 						if (event.key === 'Escape') {
@@ -109,19 +137,21 @@ export function PageSwitcher({
 
 						if (event.key === 'ArrowDown') {
 							event.preventDefault()
+							hasNavigatedOptionsRef.current = true
 							setHighlightedIndex((index) => Math.min(index + 1, options.length - 1))
 							return
 						}
 
 						if (event.key === 'ArrowUp') {
 							event.preventDefault()
+							hasNavigatedOptionsRef.current = true
 							setHighlightedIndex((index) => Math.max(index - 1, 0))
 							return
 						}
 
 						if (event.key === 'Enter') {
 							event.preventDefault()
-							selectOption(highlightedIndex)
+							selectOption(hasNavigatedOptionsRef.current ? highlightedIndex : 0)
 						}
 					}}
 					placeholder="Search pages..."
@@ -132,6 +162,25 @@ export function PageSwitcher({
 					{options.map((option, index) => {
 						const isHighlighted = index === highlightedIndex
 
+						if (option.type === 'command') {
+							return (
+								<button
+									aria-selected={isHighlighted}
+									className="page-switcher__option"
+									key={option.id}
+									onClick={openMermaidToExcalidraw}
+									onMouseEnter={() => {
+										hasNavigatedOptionsRef.current = true
+										setHighlightedIndex(index)
+									}}
+									role="option"
+									type="button"
+								>
+									<span className="page-switcher__option-title">{option.label}</span>
+								</button>
+							)
+						}
+
 						if (option.type === 'create') {
 							const label = query.trim() ? `Create new page "${query.trim()}"` : 'Create new page'
 
@@ -141,7 +190,10 @@ export function PageSwitcher({
 									className="page-switcher__option"
 									key="create"
 									onClick={createPage}
-									onMouseEnter={() => setHighlightedIndex(index)}
+									onMouseEnter={() => {
+										hasNavigatedOptionsRef.current = true
+										setHighlightedIndex(index)
+									}}
 									role="option"
 									type="button"
 								>
@@ -158,7 +210,10 @@ export function PageSwitcher({
 								className="page-switcher__option"
 								key={option.page.id}
 								onClick={() => switchToPage(option.page.id)}
-								onMouseEnter={() => setHighlightedIndex(index)}
+								onMouseEnter={() => {
+									hasNavigatedOptionsRef.current = true
+									setHighlightedIndex(index)
+								}}
 								role="option"
 								type="button"
 							>
