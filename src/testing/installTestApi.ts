@@ -15,6 +15,7 @@ declare global {
 			getSelectedShapeIds: () => string[]
 			getCurrentPageId: () => string
 			getPages: () => Array<{ id: string; name: string }>
+			getMermaidElements: () => Array<{ id: string; mermaidSource: string }>
 			resetDocument: () => Promise<void>
 		}
 	}
@@ -38,6 +39,13 @@ export function installTestApi({ getApi, getDocument, resetDocument }: TestApiOp
 
 			return document ? getPageSummaries(document) : []
 		},
+		getMermaidElements: () =>
+			(getApi()?.getSceneElements() ?? [])
+				.filter((el) => (el as any).customData?.mermaidSource)
+				.map((el) => ({
+					id: el.id,
+					mermaidSource: (el as any).customData.mermaidSource as string,
+				})),
 		resetDocument,
 	}
 }

@@ -1,9 +1,11 @@
 import React from 'react'
-import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw'
+import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, newElementWith } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+import type { ExcalidrawElement, ExcalidrawImageElement } from '@excalidraw/excalidraw/element/types'
+import { MermaidEditor, type MermaidSubmitResult } from './components/MermaidEditor'
 import { PageSwitcher } from './components/PageSwitcher'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
+import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
 import { useZoltraakDocument } from './hooks/useZoltraakDocument'
 import {
 	createBlankPage,
@@ -22,9 +24,16 @@ import {
 } from './lib/excalidrawScene'
 import { installTestApi, uninstallTestApi } from './testing/installTestApi'
 
+function createId() {
+	return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 export function App() {
 	const [api, setApi] = React.useState<ExcalidrawImperativeAPI | null>(null)
 	const [isPageSwitcherOpen, setIsPageSwitcherOpen] = React.useState(false)
+	const [isMermaidEditorOpen, setIsMermaidEditorOpen] = React.useState(false)
+	const [mermaidEditingElementId, setMermaidEditingElementId] = React.useState<string | null>(null)
+	const [mermaidEditingSource, setMermaidEditingSource] = React.useState('')
 	const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
 	const { document, documentRef, persistDocument, resetDocument, updatePageScene } =
 		useZoltraakDocument()
@@ -86,13 +95,93 @@ export function App() {
 		setIsPageSwitcherOpen(false)
 	}, [])
 
-	const openMermaidToExcalidraw = React.useCallback(() => {
-		apiRef.current?.updateScene({
-			appState: {
-				openDialog: { name: 'ttd', tab: 'mermaid' },
-			},
-		})
+	const openMermaidEditor = React.useCallback(() => {
+		setMermaidEditingElementId(null)
+		setMermaidEditingSource('')
+		setIsMermaidEditorOpen(true)
 	}, [])
+
+	const closeMermaidEditor = React.useCallback(() => {
+		setIsMermaidEditorOpen(false)
+	}, [])
+
+	const handleMermaidSubmit = React.useCallback(
+		(result: MermaidSubmitResult) => {
+			const currentApi = apiRef.current
+			if (!currentApi) return
+
+			const fileId = createId()
+
+			currentApi.addFiles([
+				{
+					id: fileId as any,
+					dataURL: result.dataUrl as any,
+					mimeType: 'image/svg+xml',
+					created: Date.now(),
+					lastRetrieved: Date.now(),
+				},
+			])
+
+			if (result.elementId) {
+				// Edit mode: update existing element
+				const elements = currentApi.getSceneElements()
+				const updatedElements = elements.map((el) => {
+					if (el.id !== result.elementId) return el
+
+					return newElementWith(el as ExcalidrawImageElement, {
+						fileId: fileId as any,
+						width: result.width,
+						height: result.height,
+						customData: { mermaidSource: result.source },
+					})
+				})
+
+				currentApi.updateScene({
+					elements: updatedElements,
+					captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+				})
+			} else {
+				// Create mode: insert new image element at viewport center
+				const appState = currentApi.getAppState()
+				const centerX = (-appState.scrollX + appState.width / 2) / appState.zoom.value - result.width / 2
+				const centerY = (-appState.scrollY + appState.height / 2) / appState.zoom.value - result.height / 2
+
+				const [imageElement] = convertToExcalidrawElements([
+					{
+						type: 'image' as const,
+						id: createId(),
+						x: centerX,
+						y: centerY,
+						width: result.width,
+						height: result.height,
+						fileId: fileId as any,
+						status: 'saved' as const,
+						customData: { mermaidSource: result.source },
+					},
+				])
+
+				const elements = currentApi.getSceneElements()
+				currentApi.updateScene({
+					elements: [...elements, imageElement],
+					captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+				})
+			}
+
+			setIsMermaidEditorOpen(false)
+		},
+		[]
+	)
+
+	const handleEditMermaid = React.useCallback((elementId: string, source: string) => {
+		setMermaidEditingElementId(elementId)
+		setMermaidEditingSource(source)
+		setIsMermaidEditorOpen(true)
+	}, [])
+
+	useMermaidDoubleClick({
+		apiRef,
+		onEditMermaid: handleEditMermaid,
+	})
 
 	const handleChange = React.useCallback(
 		(
@@ -179,9 +268,16 @@ export function App() {
 				isOpen={isPageSwitcherOpen}
 				onClose={closePageSwitcher}
 				onCreatePage={createPage}
-				onOpenMermaidToExcalidraw={openMermaidToExcalidraw}
+				onOpenMermaidToExcalidraw={openMermaidEditor}
 				onSwitchPage={switchPage}
 				pages={getPageSummaries(document)}
+			/>
+			<MermaidEditor
+				editingElementId={mermaidEditingElementId}
+				initialSource={mermaidEditingSource}
+				isOpen={isMermaidEditorOpen}
+				onClose={closeMermaidEditor}
+				onSubmit={handleMermaidSubmit}
 			/>
 		</main>
 	)
