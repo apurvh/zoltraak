@@ -13,9 +13,9 @@ test('T3: Insert Mermaid diagram via command palette', async ({ page }) => {
 	await expect(mermaidEditor.locator('.mermaid-editor__title')).toHaveText('Insert Mermaid Diagram')
 
 	// The editor should have the default flowchart pre-filled
-	const textarea = mermaidEditor.locator('#mermaid-source')
+	const textarea = mermaidEditor.locator('.cm-content')
 	await expect(textarea).toBeVisible()
-	const value = await textarea.inputValue()
+	const value = await textarea.textContent()
 	expect(value).toContain('flowchart')
 
 	// Wait for the preview to render
@@ -63,7 +63,26 @@ test('T3: Mermaid diagram persists after reload', async ({ page }) => {
 	expect(mermaidElements[0].mermaidSource).toContain('flowchart')
 })
 
-test('T3: Escape closes the Mermaid editor without inserting', async ({ page }) => {
+test('T3: Close button closes the Mermaid editor without inserting', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
+
+	const mermaidEditor = page.getByRole('dialog', { name: 'Mermaid editor' })
+	await expect(mermaidEditor).toBeVisible()
+
+	await mermaidEditor.getByRole('button', { name: 'Close' }).click()
+	await expect(mermaidEditor).toBeHidden()
+
+	// No mermaid element should have been inserted
+	const count = await page.evaluate(() => window.__zoltraakTestApi!.getMermaidElements().length)
+	expect(count).toBe(0)
+})
+
+test('T3: Escape does not close the Mermaid editor', async ({ page }) => {
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
@@ -75,11 +94,9 @@ test('T3: Escape closes the Mermaid editor without inserting', async ({ page }) 
 	await expect(mermaidEditor).toBeVisible()
 
 	await page.keyboard.press('Escape')
-	await expect(mermaidEditor).toBeHidden()
-
-	// No mermaid element should have been inserted
-	const count = await page.evaluate(() => window.__zoltraakTestApi!.getMermaidElements().length)
-	expect(count).toBe(0)
+	await page.waitForTimeout(100)
+	
+	await expect(mermaidEditor).toBeVisible()
 })
 
 test('T3: Double-click mermaid image opens editor for re-editing', async ({ page }) => {

@@ -1,5 +1,9 @@
 import React from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { vim } from '@replit/codemirror-vim'
+import { EditorView } from '@codemirror/view'
 import { renderMermaidToSvg, svgToDataUrl } from '../lib/mermaid'
+import { XIcon } from './icons'
 
 export type MermaidSubmitResult = {
 	source: string
@@ -13,6 +17,7 @@ type MermaidEditorProps = {
 	editingElementId: string | null
 	initialSource: string
 	isOpen: boolean
+	theme: 'light' | 'dark'
 	onClose: () => void
 	onSubmit: (result: MermaidSubmitResult) => void
 }
@@ -28,6 +33,7 @@ export function MermaidEditor({
 	editingElementId,
 	initialSource,
 	isOpen,
+	theme,
 	onClose,
 	onSubmit,
 }: MermaidEditorProps) {
@@ -37,7 +43,6 @@ export function MermaidEditor({
 	const [previewHeight, setPreviewHeight] = React.useState(0)
 	const [error, setError] = React.useState('')
 	const [isRendering, setIsRendering] = React.useState(false)
-	const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
 	const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
 	React.useEffect(() => {
@@ -48,8 +53,6 @@ export function MermaidEditor({
 		setError('')
 		setPreviewSvg('')
 		setIsRendering(false)
-
-		window.requestAnimationFrame(() => textareaRef.current?.focus())
 
 		// Render the initial source immediately
 		renderPreview(startSource)
@@ -82,8 +85,7 @@ export function MermaidEditor({
 		}
 	}
 
-	function handleSourceChange(event: React.ChangeEvent<HTMLTextAreaElement>) {
-		const value = event.currentTarget.value
+	function handleSourceChange(value: string) {
 		setSource(value)
 
 		if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -103,11 +105,6 @@ export function MermaidEditor({
 	}
 
 	function handleKeyDown(event: React.KeyboardEvent) {
-		if (event.key === 'Escape') {
-			event.preventDefault()
-			onClose()
-			return
-		}
 
 		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
 			event.preventDefault()
@@ -121,7 +118,7 @@ export function MermaidEditor({
 	const canSubmit = !!previewSvg && !error && !isRendering
 
 	return (
-		<div className="mermaid-editor-backdrop" onMouseDown={onClose}>
+		<div className="mermaid-editor-backdrop">
 			<div
 				aria-label="Mermaid editor"
 				aria-modal="true"
@@ -141,6 +138,14 @@ export function MermaidEditor({
 					</div>
 					<div className="mermaid-editor__header-actions">
 						<button
+							aria-label="Close"
+							className="mermaid-editor__close"
+							onClick={onClose}
+							type="button"
+						>
+							<XIcon />
+						</button>
+						<button
 							className="mermaid-editor__submit"
 							disabled={!canSubmit}
 							onClick={handleSubmit}
@@ -153,14 +158,12 @@ export function MermaidEditor({
 
 				<div className="mermaid-editor__body">
 					<div className="mermaid-editor__panel">
-						<textarea
-							aria-label="Mermaid Syntax"
-							className="mermaid-editor__textarea"
-							id="mermaid-source"
+						<CodeMirror
+							autoFocus
+							className="mermaid-editor__codemirror"
+							extensions={[vim(), EditorView.lineWrapping]}
 							onChange={handleSourceChange}
-							placeholder="Enter Mermaid syntax..."
-							ref={textareaRef}
-							spellCheck={false}
+							theme={theme}
 							value={source}
 						/>
 					</div>

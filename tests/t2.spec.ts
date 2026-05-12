@@ -83,7 +83,7 @@ test('T2: Command+K opens Mermaid editor', async ({ page }) => {
 	const mermaidEditor = page.getByRole('dialog', { name: 'Mermaid editor' })
 
 	await expect(mermaidEditor).toBeVisible()
-	await expect(mermaidEditor.locator('#mermaid-source')).toBeVisible()
+	await expect(mermaidEditor.locator('.cm-content')).toBeVisible()
 })
 
 test('T2: Command+K opens page switcher from focused editor content', async ({ page }) => {

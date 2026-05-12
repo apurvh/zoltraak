@@ -276,6 +276,7 @@ export function App() {
 				editingElementId={mermaidEditingElementId}
 				initialSource={mermaidEditingSource}
 				isOpen={isMermaidEditorOpen}
+				theme={currentPage?.appState?.theme || 'light'}
 				onClose={closeMermaidEditor}
 				onSubmit={handleMermaidSubmit}
 			/>
