@@ -80,7 +80,7 @@ export const flashDecorations = EditorView.decorations.compute([flashStateField]
 
 export const flashAttributes = EditorView.editorAttributes.compute([flashStateField], (state) => {
 	const flash = state.field(flashStateField)
-	return flash.active ? { class: 'cm-flash-active' } : {}
+	return flash.active ? { class: 'cm-flash-active' } : ({} as any)
 })
 
 function calculateMarkers(doc: string, searchString: string): FlashMarker[] {

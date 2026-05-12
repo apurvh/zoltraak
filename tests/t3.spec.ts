@@ -16,7 +16,7 @@ test('T3: Insert Mermaid diagram via command palette', async ({ page }) => {
 	const textarea = mermaidEditor.locator('.cm-content')
 	await expect(textarea).toBeVisible()
 	const value = await textarea.textContent()
-	expect(value).toContain('flowchart')
+	expect(value).toContain('sequenceDiagram')
 
 	// Wait for the preview to render
 	await expect(mermaidEditor.locator('.mermaid-editor__preview-svg svg')).toBeVisible({ timeout: 5000 })
@@ -60,7 +60,7 @@ test('T3: Mermaid diagram persists after reload', async ({ page }) => {
 		.toBe(1)
 
 	const mermaidElements = await page.evaluate(() => window.__zoltraakTestApi!.getMermaidElements())
-	expect(mermaidElements[0].mermaidSource).toContain('flowchart')
+	expect(mermaidElements[0].mermaidSource).toContain('sequenceDiagram')
 })
 
 test('T3: Close button closes the Mermaid editor without inserting', async ({ page }) => {
@@ -163,7 +163,7 @@ test('T3: Double-click mermaid image opens editor for re-editing', async ({ page
 	// which confirms the customData round-trip works
 	const elements = await page.evaluate(() => window.__zoltraakTestApi!.getMermaidElements())
 	expect(elements).toHaveLength(1)
-	expect(elements[0].mermaidSource).toContain('flowchart')
+	expect(elements[0].mermaidSource).toContain('sequenceDiagram')
 })
 
 test('T3: Flash jump behavior works', async ({ page }) => {
@@ -225,25 +225,24 @@ test('T3: Multi-character Flash jump behavior works with intelligent labels', as
 
 	await page.keyboard.press('Escape')
 
-	// Search for 'sh'
+	// Search for 'en'
 	await page.keyboard.press('s')
-	await page.keyboard.press('s')
-	await page.keyboard.press('h')
+	await page.keyboard.press('e')
+	await page.keyboard.press('n')
 
 	// Wait for badges
 	const badges = mermaidEditor.locator('.cm-flash-badge')
 	await expect(badges.first()).toBeVisible()
 
-	// In the default source, 'sh' appears in 'shopping'. 
-	// The next char is 'o'. 'o' should not be used as a label.
-	// But jumping should work. Let's just press 'a'.
+	// In the default source, 'en' appears in 'sequenceDiagram'. 
+	// Jumping should work. Let's just press 'a'.
 	await page.keyboard.press('a')
 	await expect(badges).toHaveCount(0)
 
 	await page.keyboard.press('i')
 	await page.keyboard.press('Y')
 	const text = await cmContent.textContent()
-	expect(text).toContain('Ysh')
+	expect(text).toContain('Yen')
 })
 
 test('T3: Mermaid diagram uses CSS inversion in dark mode to support Excalidraw canvas', async ({ page }) => {

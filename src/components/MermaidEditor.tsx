@@ -70,11 +70,12 @@ export function MermaidEditor({
 				view.dispatch({ effects: enableFlashEffect.of() })
 			}
 		})
+		// @ts-expect-error type definitions require 5 arguments
 		Vim.mapCommand('s', 'action', 'activateFlash', {})
 
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current)
-			Vim.unmap('s')
+			Vim.unmap('s', 'normal')
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isOpen])
