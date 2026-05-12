@@ -1,11 +1,14 @@
 import mermaid from 'mermaid'
 
-let initialized = false
+let renderCounter = 0
 
-function ensureInitialized() {
-	if (initialized) return
-	initialized = true
-
+export async function renderMermaidToSvg(
+	source: string
+): Promise<{
+	svg: string
+	width: number
+	height: number
+}> {
 	mermaid.initialize({
 		startOnLoad: false,
 		theme: 'default',
@@ -13,16 +16,6 @@ function ensureInitialized() {
 		flowchart: { useMaxWidth: true, htmlLabels: true },
 		securityLevel: 'strict',
 	})
-}
-
-let renderCounter = 0
-
-export async function renderMermaidToSvg(source: string): Promise<{
-	svg: string
-	width: number
-	height: number
-}> {
-	ensureInitialized()
 
 	const id = `mermaid-render-${++renderCounter}`
 	const { svg } = await mermaid.render(id, source.trim())

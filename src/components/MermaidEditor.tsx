@@ -132,7 +132,7 @@ export function MermaidEditor({
 			<div
 				aria-label="Mermaid editor"
 				aria-modal="true"
-				className="mermaid-editor"
+				className={`mermaid-editor mermaid-editor--${theme}`}
 				onKeyDown={handleKeyDown}
 				onMouseDown={(event) => event.stopPropagation()}
 				role="dialog"

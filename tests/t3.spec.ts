@@ -245,3 +245,38 @@ test('T3: Multi-character Flash jump behavior works with intelligent labels', as
 	const text = await cmContent.textContent()
 	expect(text).toContain('Ysh')
 })
+
+test('T3: Mermaid diagram uses CSS inversion in dark mode to support Excalidraw canvas', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	// Force dark mode via API
+	await page.evaluate(() => {
+		const api = (window as any).__zoltraakTestApi
+		if (api) api.updateScene({ appState: { theme: 'dark' } })
+	})
+
+	// Open mermaid editor
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
+
+	const mermaidEditor = page.getByRole('dialog', { name: 'Mermaid editor' })
+	await expect(mermaidEditor).toBeVisible()
+	await expect(mermaidEditor).toHaveClass(/mermaid-editor--dark/)
+
+	// Wait for SVG
+	const svgContainer = mermaidEditor.locator('.mermaid-editor__preview-svg svg')
+	await expect(svgContainer).toBeVisible({ timeout: 5000 })
+
+	// Verify that the filter is applied
+	await expect(svgContainer).toHaveCSS('filter', /invert/)
+
+	// Insert the diagram
+	await mermaidEditor.getByRole('button', { name: /Insert/ }).click()
+	await expect(mermaidEditor).toBeHidden()
+
+	await expect
+		.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getMermaidElements().length))
+		.toBe(1)
+})

@@ -17,6 +17,7 @@ declare global {
 			getPages: () => Array<{ id: string; name: string }>
 			getMermaidElements: () => Array<{ id: string; mermaidSource: string }>
 			resetDocument: () => Promise<void>
+			updateScene: (scene: any) => void
 		}
 	}
 }
@@ -47,6 +48,7 @@ export function installTestApi({ getApi, getDocument, resetDocument }: TestApiOp
 					mermaidSource: (el as any).customData.mermaidSource as string,
 				})),
 		resetDocument,
+		updateScene: (scene: any) => getApi()?.updateScene(scene),
 	}
 }
 

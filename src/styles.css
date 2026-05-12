@@ -374,3 +374,41 @@ body {
 	line-height: 1.4;
 	text-align: center;
 }
+
+/* ── Dark Theme Overrides ─────────────────────────────────────────── */
+
+.mermaid-editor--dark {
+	background: #232329;
+	border-color: rgb(255 255 255 / 10%);
+}
+
+.mermaid-editor--dark .mermaid-editor__title {
+	color: #f7f7f4;
+}
+
+.mermaid-editor--dark .mermaid-editor__subtitle {
+	color: #a3a3a8;
+}
+
+.mermaid-editor--dark .mermaid-editor__close {
+	color: #a3a3a8;
+}
+
+.mermaid-editor--dark .mermaid-editor__close:hover {
+	background: rgb(255 255 255 / 10%);
+	color: #f7f7f4;
+}
+
+.mermaid-editor--dark .mermaid-editor__codemirror {
+	background: #1e1e24;
+	border-color: rgb(255 255 255 / 10%);
+}
+
+.mermaid-editor--dark .mermaid-editor__preview {
+	background: #1e1e24;
+	border-color: rgb(255 255 255 / 10%);
+}
+
+.mermaid-editor--dark .mermaid-editor__preview-svg svg {
+	filter: invert(93%) hue-rotate(180deg);
+}
