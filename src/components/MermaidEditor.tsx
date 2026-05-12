@@ -23,12 +23,18 @@ type MermaidEditorProps = {
 	onSubmit: (result: MermaidSubmitResult) => void
 }
 
-const DEFAULT_SOURCE = `flowchart TD
-    A[Christmas] -->|Get money| B(Go shopping)
-    B --> C{Let me think}
-    C -->|One| D[Laptop]
-    C -->|Two| E[iPhone]
-    C -->|Three| F[Car]`
+const DEFAULT_SOURCE = `sequenceDiagram
+    actor User
+    participant Frontend
+    participant Backend
+    participant Database
+
+    User->>Frontend: Open app
+    Frontend->>Backend: Request data
+    Backend->>Database: Query data
+    Database-->>Backend: Return data
+    Backend-->>Frontend: Send response
+    Frontend-->>User: Show result`
 
 export function MermaidEditor({
 	editingElementId,
