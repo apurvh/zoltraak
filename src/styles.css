@@ -262,6 +262,36 @@ body {
 	box-shadow: 0 0 0 3px rgb(59 130 246 / 12%);
 }
 
+.cm-flash-badge {
+	position: absolute;
+	background: #ffcc00;
+	color: #000;
+	font-weight: bold;
+	padding: 0 2px;
+	border-radius: 3px;
+	font-size: 11px;
+	z-index: 10;
+	transform: translateY(-2px);
+	box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.cm-flash-active {
+	border-color: #ffcc00 !important;
+	box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3) !important;
+}
+
+.cm-flash-panel {
+	background-color: var(--color-surface-elevated, #2a2a2a);
+	color: var(--color-text-primary, #e2e8f0);
+	border-top: 1px solid var(--color-border, #334155);
+	padding: 4px 8px;
+	font-family: monospace;
+	font-size: 13px;
+	display: flex;
+	align-items: center;
+	height: 28px;
+}
+
 .mermaid-editor__preview {
 	flex: 1 1 0;
 	display: flex;

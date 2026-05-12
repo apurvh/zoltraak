@@ -1,8 +1,9 @@
 import React from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import { vim } from '@replit/codemirror-vim'
+import { vim, Vim } from '@replit/codemirror-vim'
 import { EditorView } from '@codemirror/view'
 import { renderMermaidToSvg, svgToDataUrl } from '../lib/mermaid'
+import { enableFlashEffect, vimFlashExtension } from '../lib/vimFlash'
 import { XIcon } from './icons'
 
 export type MermaidSubmitResult = {
@@ -57,8 +58,17 @@ export function MermaidEditor({
 		// Render the initial source immediately
 		renderPreview(startSource)
 
+		Vim.defineAction('activateFlash', (cm: any) => {
+			const view = cm.cm6
+			if (view) {
+				view.dispatch({ effects: enableFlashEffect.of() })
+			}
+		})
+		Vim.mapCommand('s', 'action', 'activateFlash', {})
+
 		return () => {
 			if (debounceRef.current) clearTimeout(debounceRef.current)
+			Vim.unmap('s')
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isOpen])
@@ -161,7 +171,7 @@ export function MermaidEditor({
 						<CodeMirror
 							autoFocus
 							className="mermaid-editor__codemirror"
-							extensions={[vim(), EditorView.lineWrapping]}
+							extensions={[vim(), EditorView.lineWrapping, vimFlashExtension()]}
 							onChange={handleSourceChange}
 							theme={theme}
 							value={source}

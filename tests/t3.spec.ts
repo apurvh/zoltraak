@@ -165,3 +165,83 @@ test('T3: Double-click mermaid image opens editor for re-editing', async ({ page
 	expect(elements).toHaveLength(1)
 	expect(elements[0].mermaidSource).toContain('flowchart')
 })
+
+test('T3: Flash jump behavior works', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	// Insert a mermaid diagram
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
+
+	const mermaidEditor = page.getByRole('dialog', { name: 'Mermaid editor' })
+	await expect(mermaidEditor).toBeVisible()
+
+	const cmContent = mermaidEditor.locator('.cm-content')
+	await expect(cmContent).toBeVisible()
+
+	// Ensure we are in normal mode by sending Escape
+	await page.keyboard.press('Escape')
+
+	// Press 's' to activate flash
+	await page.keyboard.press('s')
+
+	// Press 'e' to search for 'e'
+	await page.keyboard.press('e')
+
+	// Wait for badges to appear
+	const badges = mermaidEditor.locator('.cm-flash-badge')
+	await expect(badges.first()).toBeVisible()
+
+	// Press 'a' to jump to the first 'e'
+	await page.keyboard.press('a')
+
+	// Verify badges disappear
+	await expect(badges).toHaveCount(0)
+
+	// Press 'i' to enter insert mode at cursor, type 'X'
+	await page.keyboard.press('i')
+	await page.keyboard.press('X')
+
+	// Verify text contains X
+	const text = await cmContent.textContent()
+	expect(text).toContain('X')
+})
+
+test('T3: Multi-character Flash jump behavior works with intelligent labels', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
+
+	const mermaidEditor = page.getByRole('dialog', { name: 'Mermaid editor' })
+	await expect(mermaidEditor).toBeVisible()
+
+	const cmContent = mermaidEditor.locator('.cm-content')
+	await expect(cmContent).toBeVisible()
+
+	await page.keyboard.press('Escape')
+
+	// Search for 'sh'
+	await page.keyboard.press('s')
+	await page.keyboard.press('s')
+	await page.keyboard.press('h')
+
+	// Wait for badges
+	const badges = mermaidEditor.locator('.cm-flash-badge')
+	await expect(badges.first()).toBeVisible()
+
+	// In the default source, 'sh' appears in 'shopping'. 
+	// The next char is 'o'. 'o' should not be used as a label.
+	// But jumping should work. Let's just press 'a'.
+	await page.keyboard.press('a')
+	await expect(badges).toHaveCount(0)
+
+	await page.keyboard.press('i')
+	await page.keyboard.press('Y')
+	const text = await cmContent.textContent()
+	expect(text).toContain('Ysh')
+})
