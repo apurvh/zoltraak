@@ -7,6 +7,7 @@ import { PageSwitcher } from './components/PageSwitcher'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
 import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
 import { useZoltraakDocument } from './hooks/useZoltraakDocument'
+import { getDefaultImageFileId, type DefaultImage } from './lib/defaultImages'
 import {
 	createBlankPage,
 	getCurrentPage,
@@ -35,6 +36,7 @@ export function App() {
 	const [mermaidEditingElementId, setMermaidEditingElementId] = React.useState<string | null>(null)
 	const [mermaidEditingSource, setMermaidEditingSource] = React.useState('')
 	const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
+	const lastPointerScenePositionRef = React.useRef<{ x: number; y: number } | null>(null)
 	const { document, documentRef, persistDocument, resetDocument, updatePageScene } =
 		useZoltraakDocument()
 
@@ -104,6 +106,72 @@ export function App() {
 	const closeMermaidEditor = React.useCallback(() => {
 		setIsMermaidEditorOpen(false)
 	}, [])
+
+	const handlePointerUpdate = React.useCallback(
+		({ pointer }: { pointer: { x: number; y: number } }) => {
+			lastPointerScenePositionRef.current = { x: pointer.x, y: pointer.y }
+		},
+		[]
+	)
+
+	const getImageInsertionPosition = React.useCallback(
+		(appState: AppState, width: number, height: number) => {
+			const pointer = lastPointerScenePositionRef.current
+			const centerX =
+				pointer?.x ?? (-appState.scrollX + appState.width / 2) / appState.zoom.value
+			const centerY =
+				pointer?.y ?? (-appState.scrollY + appState.height / 2) / appState.zoom.value
+
+			return {
+				x: centerX - width / 2,
+				y: centerY - height / 2,
+			}
+		},
+		[]
+	)
+
+	const handleInsertDefaultImage = React.useCallback(
+		(image: DefaultImage) => {
+			const currentApi = apiRef.current
+			if (!currentApi) return
+
+			const fileId = getDefaultImageFileId(image)
+			const now = Date.now()
+
+			currentApi.addFiles([
+				{
+					id: fileId as any,
+					dataURL: image.dataUrl as any,
+					mimeType: image.mimeType,
+					created: now,
+					lastRetrieved: now,
+				},
+			])
+
+			const appState = currentApi.getAppState()
+			const position = getImageInsertionPosition(appState, image.width, image.height)
+			const [imageElement] = convertToExcalidrawElements([
+				{
+					type: 'image' as const,
+					id: createId(),
+					x: position.x,
+					y: position.y,
+					width: image.width,
+					height: image.height,
+					fileId: fileId as any,
+					status: 'saved' as const,
+					customData: { defaultImageId: image.id },
+				},
+			])
+
+			const elements = currentApi.getSceneElements()
+			currentApi.updateScene({
+				elements: [...elements, imageElement],
+				captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+			})
+		},
+		[getImageInsertionPosition]
+	)
 
 	const handleMermaidSubmit = React.useCallback(
 		(result: MermaidSubmitResult) => {
@@ -262,12 +330,14 @@ export function App() {
 				excalidrawAPI={setApi}
 				initialData={pageInitialData(currentPage)}
 				onChange={handleChange}
+				onPointerUpdate={handlePointerUpdate}
 			/>
 			<PageSwitcher
 				currentPageId={document.currentPageId}
 				isOpen={isPageSwitcherOpen}
 				onClose={closePageSwitcher}
 				onCreatePage={createPage}
+				onInsertDefaultImage={handleInsertDefaultImage}
 				onOpenMermaidToExcalidraw={openMermaidEditor}
 				onSwitchPage={switchPage}
 				pages={getPageSummaries(document)}

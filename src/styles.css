@@ -105,6 +105,14 @@ body {
 	color: #707075;
 }
 
+.page-switcher__thumbnail {
+	flex: 0 0 auto;
+	width: 24px;
+	height: 24px;
+	margin-right: 12px;
+	object-fit: contain;
+}
+
 .page-switcher__option[aria-selected='true'] .page-switcher__icon {
 	color: #1d1d1f;
 }

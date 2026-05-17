@@ -1,4 +1,5 @@
 import React from 'react'
+import { type DefaultImage, defaultImages, matchesDefaultImage } from '../lib/defaultImages'
 import { getNextPageName, type PageSummary } from '../lib/document'
 import { FileIcon, FilePlusIcon, WandIcon } from './icons'
 
@@ -7,6 +8,7 @@ type PageSwitcherProps = {
 	isOpen: boolean
 	onClose: () => void
 	onCreatePage: (name: string) => void
+	onInsertDefaultImage: (image: DefaultImage) => void
 	onOpenMermaidToExcalidraw: () => void
 	onSwitchPage: (pageId: string) => void
 	pages: PageSummary[]
@@ -26,15 +28,20 @@ function getFilteredPageOptions(pages: PageSummary[], query: string) {
 	const filteredCommands = normalizedQuery
 		? commandOptions.filter((command) => command.label.toLowerCase().includes(normalizedQuery))
 		: commandOptions
+	const filteredDefaultImages = defaultImages.filter((image) =>
+		matchesDefaultImage(image, normalizedQuery)
+	)
 
 	return normalizedQuery
 		? [
 				...filteredCommands,
+				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 				{ type: 'create' as const, page: null },
 			]
 		: [
 				...commandOptions,
+				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
 				{ type: 'create' as const, page: null },
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 			]
@@ -77,6 +84,7 @@ export function PageSwitcher({
 	isOpen,
 	onClose,
 	onCreatePage,
+	onInsertDefaultImage,
 	onOpenMermaidToExcalidraw,
 	onSwitchPage,
 	pages,
@@ -121,6 +129,14 @@ export function PageSwitcher({
 		onOpenMermaidToExcalidraw()
 	}, [onClose, onOpenMermaidToExcalidraw])
 
+	const insertDefaultImage = React.useCallback(
+		(image: DefaultImage) => {
+			onClose()
+			onInsertDefaultImage(image)
+		},
+		[onClose, onInsertDefaultImage]
+	)
+
 	const selectOption = React.useCallback(
 		(index: number) => {
 			const option = options[index]
@@ -130,15 +146,18 @@ export function PageSwitcher({
 				createPage()
 			} else if (option.type === 'command') {
 				openMermaidToExcalidraw()
+			} else if (option.type === 'default-image') {
+				insertDefaultImage(option.image)
 			} else {
 				switchToPage(option.page.id)
 			}
 		},
-		[createPage, openMermaidToExcalidraw, options, switchToPage]
+		[createPage, insertDefaultImage, openMermaidToExcalidraw, options, switchToPage]
 	)
 
 	if (!isOpen) return null
 
+	const firstImageIndex = options.findIndex((o) => o.type === 'default-image')
 	const firstPageIndex = options.findIndex((o) => o.type === 'page')
 
 	const handleMouseEnter = (index: number) => {
@@ -212,6 +231,23 @@ export function PageSwitcher({
 									onMouseEnter={() => handleMouseEnter(index)}
 								/>
 							)
+						} else if (option.type === 'default-image') {
+							key = `default-image-${option.image.id}`
+							optionButton = (
+								<OptionButton
+									icon={
+										<img
+											alt=""
+											className="page-switcher__thumbnail"
+											src={option.image.assetUrl}
+										/>
+									}
+									isHighlighted={isHighlighted}
+									label={option.image.label}
+									onClick={() => insertDefaultImage(option.image)}
+									onMouseEnter={() => handleMouseEnter(index)}
+								/>
+							)
 						} else if (option.type === 'create') {
 							key = 'create'
 							optionButton = (
@@ -243,6 +279,7 @@ export function PageSwitcher({
 
 						return (
 							<React.Fragment key={key}>
+								{index === firstImageIndex && <div className="page-switcher__heading">Images</div>}
 								{showPagesHeading && <div className="page-switcher__heading">Pages</div>}
 								{optionButton}
 							</React.Fragment>
