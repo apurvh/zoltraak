@@ -1,6 +1,6 @@
 import React from 'react'
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, newElementWith } from '@excalidraw/excalidraw'
-import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import type { AppState, BinaryFiles, ExcalidrawImperativeAPI, PointerDownState } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement } from '@excalidraw/excalidraw/element/types'
 import { MermaidEditor, type MermaidSubmitResult } from './components/MermaidEditor'
 import { PageSwitcher } from './components/PageSwitcher'
@@ -110,6 +110,92 @@ export function App() {
 	const handlePointerUpdate = React.useCallback(
 		({ pointer }: { pointer: { x: number; y: number } }) => {
 			lastPointerScenePositionRef.current = { x: pointer.x, y: pointer.y }
+		},
+		[]
+	)
+
+	const handlePointerUp = React.useCallback(
+		(activeTool: AppState['activeTool'], pointerDownState: PointerDownState) => {
+			if (activeTool.type !== 'selection') return
+
+			const currentApi = apiRef.current
+			if (!currentApi) return
+
+			// Fast-path: if the drag touched any existing element, it's a selection, not a draw.
+			if (pointerDownState.hit.allHitElements.length > 0) return
+
+			const startX = pointerDownState.origin.x
+			const startY = pointerDownState.origin.y
+			const endPosition = lastPointerScenePositionRef.current ?? pointerDownState.lastCoords
+			const endX = endPosition.x
+			const endY = endPosition.y
+
+			const width = Math.abs(endX - startX)
+			const height = Math.abs(endY - startY)
+			const hasSelectionDrag =
+				pointerDownState.drag.hasOccurred ||
+				pointerDownState.boxSelection.hasOccurred ||
+				width >= 15 ||
+				height >= 15
+			if (!hasSelectionDrag) return
+
+			// Ignore tiny drags that are likely accidental
+			if (width < 15 && height < 15) return
+
+			const isHorizontalArrow = height < 15 || width > height * 3
+			const isVerticalArrow = width < 15 || height > width * 3
+
+			let isArrow = false
+			let isHorizontal = false
+
+			if (isHorizontalArrow && !isVerticalArrow) {
+				isArrow = true
+				isHorizontal = true
+			} else if (isVerticalArrow && !isHorizontalArrow) {
+				isArrow = true
+				isHorizontal = false
+			} else if (isHorizontalArrow && isVerticalArrow) {
+				isArrow = true
+				isHorizontal = width > height
+			} else {
+				isArrow = false
+			}
+
+			// Defer by one task so Excalidraw can settle its selection state after pointer-up
+			setTimeout(() => {
+				const settledAppState = currentApi.getAppState()
+				// Double-check: if something got selected (e.g. via box selection), bail out
+				if (Object.keys(settledAppState.selectedElementIds).length > 0) return
+
+				let newElement
+				if (isArrow) {
+					newElement = {
+						type: 'arrow' as const,
+						x: startX,
+						y: startY,
+						points: [[0, 0], isHorizontal ? [endX - startX, 0] : [0, endY - startY]],
+						roughness: settledAppState.currentItemRoughness,
+						strokeColor: settledAppState.currentItemStrokeColor,
+					}
+				} else {
+					newElement = {
+						type: 'rectangle' as const,
+						x: Math.min(startX, endX),
+						y: Math.min(startY, endY),
+						width,
+						height,
+						roughness: settledAppState.currentItemRoughness,
+						strokeColor: settledAppState.currentItemStrokeColor,
+					}
+				}
+
+				const [excalidrawElement] = convertToExcalidrawElements([newElement])
+				const elements = currentApi.getSceneElements()
+				currentApi.updateScene({
+					elements: [...elements, excalidrawElement],
+					captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+				})
+			}, 0)
 		},
 		[]
 	)
@@ -331,6 +417,7 @@ export function App() {
 				initialData={pageInitialData(currentPage)}
 				onChange={handleChange}
 				onPointerUpdate={handlePointerUpdate}
+				onPointerUp={handlePointerUp}
 			/>
 			<PageSwitcher
 				currentPageId={document.currentPageId}

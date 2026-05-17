@@ -6,6 +6,7 @@ test('T1: r and a draw shapes freely, selected shapes delete with macOS Delete k
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+	await page.mouse.click(320, 240)
 
 	await page.keyboard.press('r')
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getCurrentToolId())).toBe('rectangle')

@@ -40,3 +40,13 @@ Insert bundled default images from the command palette:
 - Matching default image results appear with an image icon and label.
 - Press `Enter` on a default image result to insert it onto the canvas at the current cursor position.
 - If no cursor position is available, insert the image at the current viewport center.
+
+## T5 - Auto Shape from Selection
+
+Quickly create rectangles or arrows by dragging in selection mode:
+
+- Drag an empty area of the canvas in selection mode (the default pointer).
+- If your drag is long and thin (or strictly horizontal/vertical), it creates an Arrow.
+- If your drag is wide and boxy, it creates a Rectangle.
+- Very small drags (< 15px) are ignored to prevent accidental shape creation.
+- If your drag intercepts and selects existing elements, no shape is created.

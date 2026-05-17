@@ -35,9 +35,9 @@ function getFilteredPageOptions(pages: PageSummary[], query: string) {
 	return normalizedQuery
 		? [
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
-				{ type: 'create' as const, page: null },
 				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
 				...filteredCommands,
+				{ type: 'create' as const, page: null },
 			]
 		: [
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
