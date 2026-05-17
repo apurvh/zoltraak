@@ -34,16 +34,16 @@ function getFilteredPageOptions(pages: PageSummary[], query: string) {
 
 	return normalizedQuery
 		? [
-				...filteredCommands,
-				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
 				{ type: 'create' as const, page: null },
+				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
+				...filteredCommands,
 			]
 		: [
-				...commandOptions,
-				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
-				{ type: 'create' as const, page: null },
 				...filteredPages.map((page) => ({ type: 'page' as const, page })),
+				{ type: 'create' as const, page: null },
+				...filteredDefaultImages.map((image) => ({ type: 'default-image' as const, image })),
+				...commandOptions,
 			]
 }
 
@@ -157,6 +157,7 @@ export function PageSwitcher({
 
 	if (!isOpen) return null
 
+	const firstCommandIndex = options.findIndex((o) => o.type === 'command')
 	const firstImageIndex = options.findIndex((o) => o.type === 'default-image')
 	const firstPageIndex = options.findIndex((o) => o.type === 'page')
 
@@ -279,8 +280,9 @@ export function PageSwitcher({
 
 						return (
 							<React.Fragment key={key}>
-								{index === firstImageIndex && <div className="page-switcher__heading">Images</div>}
 								{showPagesHeading && <div className="page-switcher__heading">Pages</div>}
+								{index === firstImageIndex && <div className="page-switcher__heading">Images</div>}
+								{index === firstCommandIndex && <div className="page-switcher__heading">Commands</div>}
 								{optionButton}
 							</React.Fragment>
 						)
