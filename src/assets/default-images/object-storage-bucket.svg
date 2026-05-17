@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="160" viewBox="0 0 180 160" fill="none">
+  <title>Object Storage Bucket</title>
+  <path d="M42 48h96l-10 82H52L42 48z" fill="#ffffff" stroke="#1f2937" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M34 48h112" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <path d="M62 48l8-20h40l8 20" stroke="#1f2937" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="66" y="72" width="18" height="18" rx="3" stroke="#1f2937" stroke-width="4"/>
+  <rect x="96" y="72" width="18" height="18" rx="3" stroke="#1f2937" stroke-width="4"/>
+  <rect x="81" y="102" width="18" height="18" rx="3" stroke="#1f2937" stroke-width="4"/>
+  <path d="M70 130h40" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+</svg>
