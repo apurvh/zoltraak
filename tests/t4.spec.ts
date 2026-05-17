@@ -1,4 +1,26 @@
 import { expect, test } from '@playwright/test'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const defaultImagesDirectory = join(process.cwd(), 'src/assets/default-images')
+
+test('T4: bundled default SVGs use thin transparent strokes', () => {
+	const svgFiles = readdirSync(defaultImagesDirectory).filter((file) => file.endsWith('.svg'))
+
+	expect(svgFiles.length).toBeGreaterThan(0)
+
+	for (const file of svgFiles) {
+		const svg = readFileSync(join(defaultImagesDirectory, file), 'utf8')
+
+		expect(svg, `${file} should not have white fills`).not.toContain('fill="#ffffff"')
+		expect(svg, `${file} should not use the old thick stroke width`).not.toContain(
+			'stroke-width="4"'
+		)
+		expect(svg, `${file} should use the 30% thinner stroke width`).toContain(
+			'stroke-width="2.8"'
+		)
+	}
+})
 
 test('T4: command palette inserts a bundled default image at the cursor position', async ({
 	page,

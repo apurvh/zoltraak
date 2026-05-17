@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
   <title>Stick Admin</title>
-  <circle cx="74" cy="36" r="18" stroke="#1f2937" stroke-width="4"/>
-  <path d="M74 56v46" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M44 76h60" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M74 102 48 136" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M74 102 100 136" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M108 30l20 8v18c0 16-8 27-20 34-12-7-20-18-20-34V38l20-8z" fill="#ffffff" stroke="#1f2937" stroke-width="4" stroke-linejoin="round"/>
-  <path d="M100 58l6 6 12-16" stroke="#1f2937" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="74" cy="36" r="18" stroke="#1f2937" stroke-width="2.8"/>
+  <path d="M74 56v46" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M44 76h60" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M74 102 48 136" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M74 102 100 136" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M108 30l20 8v18c0 16-8 27-20 34-12-7-20-18-20-34V38l20-8z" fill="none" stroke="#1f2937" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M100 58l6 6 12-16" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

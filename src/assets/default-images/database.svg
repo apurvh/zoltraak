@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
   <title>Database</title>
-  <ellipse cx="80" cy="38" rx="48" ry="18" fill="#ffffff" stroke="#1f2937" stroke-width="4"/>
-  <path d="M32 38v72c0 10 21 18 48 18s48-8 48-18V38" stroke="#1f2937" stroke-width="4"/>
-  <path d="M32 74c0 10 21 18 48 18s48-8 48-18" stroke="#1f2937" stroke-width="4"/>
-  <path d="M32 110c0 10 21 18 48 18s48-8 48-18" stroke="#1f2937" stroke-width="4"/>
+  <ellipse cx="80" cy="38" rx="48" ry="18" fill="none" stroke="#1f2937" stroke-width="2.8"/>
+  <path d="M32 38v72c0 10 21 18 48 18s48-8 48-18V38" stroke="#1f2937" stroke-width="2.8"/>
+  <path d="M32 74c0 10 21 18 48 18s48-8 48-18" stroke="#1f2937" stroke-width="2.8"/>
+  <path d="M32 110c0 10 21 18 48 18s48-8 48-18" stroke="#1f2937" stroke-width="2.8"/>
 </svg>

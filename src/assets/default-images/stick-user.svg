@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
   <title>Stick User</title>
-  <circle cx="80" cy="36" r="18" stroke="#1f2937" stroke-width="4"/>
-  <path d="M80 56v46" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M48 76h64" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M80 102 52 136" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
-  <path d="M80 102 108 136" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="80" cy="36" r="18" stroke="#1f2937" stroke-width="2.8"/>
+  <path d="M80 56v46" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M48 76h64" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M80 102 52 136" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M80 102 108 136" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
 </svg>
