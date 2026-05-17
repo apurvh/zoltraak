@@ -27,3 +27,16 @@ Insert Mermaid diagrams as editable image elements on the canvas:
 - Press `Cmd+Enter` or click "Insert →" to place the diagram on the canvas as an image.
 - Double-click any Mermaid image on the canvas to re-open the editor and modify the diagram.
 - The Mermaid source code is preserved, enabling round-trip editing.
+
+## T4 - Default Image Insertion
+
+Insert bundled default images from the command palette:
+
+- Store bundled default images under `src/assets/default-images/`.
+- Use one file per default image, such as `stick-user.svg`, `stick-admin.svg`, `database.svg`, `queue.svg`, `web-app.svg`, and `mobile-app.svg`.
+- Keep searchable image metadata in app code, ideally `src/lib/defaultImages.ts`, with each image's id, label, search terms, asset path, MIME type, and default canvas size.
+- Press `Command+K` to open the command palette.
+- Search for terms such as `stick user`, `stick admin`, `database`, `queue`, `web app`, or `mobile app`.
+- Matching default image results appear with an image icon and label.
+- Press `Enter` on a default image result to insert it onto the canvas at the current cursor position.
+- If no cursor position is available, insert the image at the current viewport center.

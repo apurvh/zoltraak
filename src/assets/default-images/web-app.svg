@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="140" viewBox="0 0 180 140" fill="none">
+  <title>Web App</title>
+  <rect x="18" y="20" width="144" height="100" rx="6" fill="#ffffff" stroke="#1f2937" stroke-width="4"/>
+  <path d="M18 46h144" stroke="#1f2937" stroke-width="4"/>
+  <circle cx="34" cy="33" r="4" fill="#1f2937"/>
+  <circle cx="48" cy="33" r="4" fill="#1f2937"/>
+  <circle cx="62" cy="33" r="4" fill="#1f2937"/>
+  <rect x="34" y="64" width="50" height="36" rx="4" stroke="#1f2937" stroke-width="4"/>
+  <path d="M102 68h38" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <path d="M102 84h30" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <path d="M102 100h34" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+</svg>

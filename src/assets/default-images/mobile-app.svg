@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="180" viewBox="0 0 120 180" fill="none">
+  <title>Mobile App</title>
+  <rect x="24" y="12" width="72" height="156" rx="12" fill="#ffffff" stroke="#1f2937" stroke-width="4"/>
+  <path d="M50 28h20" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <rect x="38" y="48" width="44" height="44" rx="6" stroke="#1f2937" stroke-width="4"/>
+  <path d="M40 110h40" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <path d="M40 126h32" stroke="#1f2937" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="60" cy="150" r="5" fill="#1f2937"/>
+</svg>
