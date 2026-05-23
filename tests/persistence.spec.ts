@@ -60,3 +60,38 @@ test('autosave keeps trying after a transient storage failure', async ({ page })
 		.poll(() => page.evaluate(() => window.__zoltraakStorageOpenAttempts ?? 0))
 		.toBeGreaterThan(1)
 })
+
+test('stale tabs sync and do not overwrite drawings saved from another tab', async ({ context, page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	const staleTab = await context.newPage()
+	await staleTab.goto('/')
+	await staleTab.waitForFunction(() => window.__zoltraakTestApi)
+
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
+
+	await staleTab.bringToFront()
+	await expect
+		.poll(() => staleTab.evaluate(() => window.__zoltraakTestApi!.getShapes().length))
+		.toBe(1)
+
+	await staleTab.keyboard.press('r')
+
+	await expect.poll(() => staleTab.evaluate(() => window.__zoltraakTestApi!.getCurrentToolId())).toBe('rectangle')
+
+	const reloadTab = await context.newPage()
+	await reloadTab.goto('/')
+	await reloadTab.waitForFunction(() => window.__zoltraakTestApi)
+
+	await expect
+		.poll(() => reloadTab.evaluate(() => window.__zoltraakTestApi!.getShapes().length))
+		.toBe(1)
+})

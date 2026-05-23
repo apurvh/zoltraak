@@ -42,6 +42,7 @@ export type ZoltraakPage = {
 
 export type ZoltraakDocument = {
 	schemaVersion: 1
+	updatedAt: number
 	currentPageId: string
 	pages: ZoltraakPage[]
 }
@@ -82,8 +83,16 @@ export function createDefaultDocument(): ZoltraakDocument {
 
 	return {
 		schemaVersion: 1,
+		updatedAt: Date.now(),
 		currentPageId: firstPage.id,
 		pages: [firstPage],
+	}
+}
+
+export function withUpdatedAt(document: ZoltraakDocument): ZoltraakDocument {
+	return {
+		...document,
+		updatedAt: Math.max(Date.now(), document.updatedAt + 1),
 	}
 }
 
@@ -159,7 +168,7 @@ export async function loadDocument() {
 	const db = await getDb()
 	const document = await db.get(DOCUMENT_STORE, DOCUMENT_KEY)
 
-	return document ?? createDefaultDocument()
+	return document ? { ...document, updatedAt: document.updatedAt ?? 0 } : createDefaultDocument()
 }
 
 export async function saveDocument(document: ZoltraakDocument) {

@@ -37,8 +37,20 @@ export function App() {
 	const [mermaidEditingSource, setMermaidEditingSource] = React.useState('')
 	const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
 	const lastPointerScenePositionRef = React.useRef<{ x: number; y: number } | null>(null)
+	const isApplyingExternalDocumentRef = React.useRef(false)
+	const applyExternalDocument = React.useCallback((nextDocument: ZoltraakDocument) => {
+		const currentApi = apiRef.current
+		const page = getCurrentPage(nextDocument)
+		if (!currentApi || !page) return
+
+		isApplyingExternalDocumentRef.current = true
+		loadExcalidrawPage(currentApi, page)
+		window.setTimeout(() => {
+			isApplyingExternalDocumentRef.current = false
+		}, 0)
+	}, [])
 	const { document, documentRef, persistDocument, resetDocument, updatePageScene } =
-		useZoltraakDocument()
+		useZoltraakDocument(applyExternalDocument)
 
 	React.useEffect(() => {
 		apiRef.current = api
@@ -343,6 +355,8 @@ export function App() {
 			appState: AppState,
 			files: BinaryFiles
 		) => {
+			if (isApplyingExternalDocumentRef.current) return
+
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
