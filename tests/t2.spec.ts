@@ -62,6 +62,10 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
 
+	await page.keyboard.press('Meta+K')
+	await expect(page.getByText(/^Last edited /)).toBeVisible()
+	await page.keyboard.press('Escape')
+
 	await page.keyboard.press('r')
 	await page.mouse.move(220, 180)
 	await page.mouse.down()
@@ -70,6 +74,28 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 
 	await page.keyboard.press('Meta+K')
 	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
+	await expect(page.getByText(/^Last edited /)).toBeVisible()
+})
+
+test('T2: Command+K page switcher follows dark mode', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.evaluate(() => {
+		window.__zoltraakTestApi!.updateScene({ appState: { theme: 'dark' } })
+	})
+
+	await page.keyboard.press('Meta+K')
+
+	const pageSwitcher = page.getByRole('dialog', { name: 'Page switcher' })
+	await expect(pageSwitcher).toBeVisible()
+	await expect(pageSwitcher).toHaveClass(/page-switcher--dark/)
+	await expect(pageSwitcher).toHaveCSS('background-color', 'rgb(20, 20, 22)')
+	await expect(page.getByPlaceholder('Search pages...')).toHaveCSS(
+		'background-color',
+		'rgb(20, 20, 22)'
+	)
 })
 
 test('T2: Command+K opens Mermaid editor', async ({ page }) => {

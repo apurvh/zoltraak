@@ -51,11 +51,18 @@ body {
 	box-shadow: 0 24px 80px rgb(0 0 0 / 24%);
 }
 
+.page-switcher--dark {
+	border-color: rgb(255 255 255 / 14%);
+	background: #141416;
+	box-shadow: 0 24px 80px rgb(0 0 0 / 48%);
+}
+
 .page-switcher__input {
 	width: 100%;
 	height: 52px;
 	border: 0;
 	border-bottom: 1px solid rgb(20 20 20 / 10%);
+	background: #ffffff;
 	padding: 0 16px;
 	outline: none;
 	color: #1d1d1f;
@@ -63,8 +70,31 @@ body {
 	font-size: 16px;
 }
 
+.page-switcher--dark .page-switcher__input {
+	border-bottom-color: rgb(255 255 255 / 12%);
+	background: #141416;
+	color: #f5f5f3;
+}
+
 .page-switcher__input::placeholder {
 	color: #707075;
+}
+
+.page-switcher--dark .page-switcher__input::placeholder {
+	color: #8f8f96;
+}
+
+.page-switcher__last-edited {
+	border-bottom: 1px solid rgb(20 20 20 / 8%);
+	padding: 8px 16px;
+	color: #707075;
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+.page-switcher--dark .page-switcher__last-edited {
+	border-bottom-color: rgb(255 255 255 / 10%);
+	color: #a7a7ad;
 }
 
 .page-switcher__list {
@@ -88,8 +118,16 @@ body {
 	text-align: left;
 }
 
+.page-switcher--dark .page-switcher__option {
+	color: #f5f5f3;
+}
+
 .page-switcher__option[aria-selected='true'] {
 	background: #f0f0ed;
+}
+
+.page-switcher--dark .page-switcher__option[aria-selected='true'] {
+	background: #2b2b30;
 }
 
 .page-switcher__option-content {
@@ -105,6 +143,10 @@ body {
 	color: #707075;
 }
 
+.page-switcher--dark .page-switcher__icon {
+	color: #a7a7ad;
+}
+
 .page-switcher__thumbnail {
 	flex: 0 0 auto;
 	width: 24px;
@@ -113,8 +155,17 @@ body {
 	object-fit: contain;
 }
 
+.page-switcher--dark .page-switcher__thumbnail {
+	filter: invert(1) brightness(0.86);
+	opacity: 0.85;
+}
+
 .page-switcher__option[aria-selected='true'] .page-switcher__icon {
 	color: #1d1d1f;
+}
+
+.page-switcher--dark .page-switcher__option[aria-selected='true'] .page-switcher__icon {
+	color: #f5f5f3;
 }
 
 .page-switcher__option-title {
@@ -133,11 +184,19 @@ body {
 	letter-spacing: 0.5px;
 }
 
+.page-switcher--dark .page-switcher__heading {
+	color: #a7a7ad;
+}
+
 .page-switcher__option-meta {
 	flex: 0 0 auto;
 	padding: 0 10px;
 	color: #707075;
 	font-size: 12px;
+}
+
+.page-switcher--dark .page-switcher__option-meta {
+	color: #a7a7ad;
 }
 
 /* ── Mermaid Editor ───────────────────────────────────────────────── */

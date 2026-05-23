@@ -6,12 +6,14 @@ import { FileIcon, FilePlusIcon, WandIcon } from './icons'
 type PageSwitcherProps = {
 	currentPageId: string
 	isOpen: boolean
+	lastUpdatedAt: number
 	onClose: () => void
 	onCreatePage: (name: string) => void
 	onInsertDefaultImage: (image: DefaultImage) => void
 	onOpenMermaidToExcalidraw: () => void
 	onSwitchPage: (pageId: string) => void
 	pages: PageSummary[]
+	theme: 'light' | 'dark'
 }
 
 type CommandOption = { type: 'command'; id: 'mermaid-to-excalidraw'; label: string }
@@ -19,6 +21,22 @@ type CommandOption = { type: 'command'; id: 'mermaid-to-excalidraw'; label: stri
 const commandOptions: CommandOption[] = [
 	{ type: 'command', id: 'mermaid-to-excalidraw', label: 'Insert Mermaid diagram' },
 ]
+
+function formatLastEdited(timestamp: number) {
+	const elapsedMs = Math.max(0, Date.now() - timestamp)
+	const elapsedMinutes = Math.floor(elapsedMs / 60_000)
+
+	if (elapsedMinutes < 1) return 'Last edited just now'
+	if (elapsedMinutes < 60) return `Last edited ${elapsedMinutes}m ago`
+
+	const elapsedHours = Math.floor(elapsedMinutes / 60)
+	if (elapsedHours < 24) return `Last edited ${elapsedHours}h ago`
+
+	return `Last edited ${new Intl.DateTimeFormat(undefined, {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+	}).format(new Date(timestamp))}`
+}
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
 	const normalizedQuery = query.trim().toLowerCase()
@@ -82,12 +100,14 @@ function OptionButton({ icon, isHighlighted, label, meta, onClick, onMouseEnter 
 export function PageSwitcher({
 	currentPageId,
 	isOpen,
+	lastUpdatedAt,
 	onClose,
 	onCreatePage,
 	onInsertDefaultImage,
 	onOpenMermaidToExcalidraw,
 	onSwitchPage,
 	pages,
+	theme,
 }: PageSwitcherProps) {
 	const [query, setQuery] = React.useState('')
 	const [highlightedIndex, setHighlightedIndex] = React.useState(0)
@@ -171,7 +191,7 @@ export function PageSwitcher({
 			<div
 				aria-label="Page switcher"
 				aria-modal="true"
-				className="page-switcher"
+				className={`page-switcher page-switcher--${theme}`}
 				onMouseDown={(event) => event.stopPropagation()}
 				role="dialog"
 			>
@@ -213,6 +233,7 @@ export function PageSwitcher({
 					ref={inputRef}
 					value={query}
 				/>
+				<div className="page-switcher__last-edited">{formatLastEdited(lastUpdatedAt)}</div>
 				<div aria-label="Pages" className="page-switcher__list" role="listbox">
 					{options.map((option, index) => {
 						const isHighlighted = index === highlightedIndex

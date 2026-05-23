@@ -436,12 +436,14 @@ export function App() {
 			<PageSwitcher
 				currentPageId={document.currentPageId}
 				isOpen={isPageSwitcherOpen}
+				lastUpdatedAt={document.updatedAt}
 				onClose={closePageSwitcher}
 				onCreatePage={createPage}
 				onInsertDefaultImage={handleInsertDefaultImage}
 				onOpenMermaidToExcalidraw={openMermaidEditor}
 				onSwitchPage={switchPage}
 				pages={getPageSummaries(document)}
+				theme={currentPage?.appState?.theme === 'dark' ? 'dark' : 'light'}
 			/>
 			<MermaidEditor
 				editingElementId={mermaidEditingElementId}
