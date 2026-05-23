@@ -63,7 +63,10 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
 
 	await page.keyboard.press('Meta+K')
-	await expect(page.getByText(/^Last edited /)).toBeVisible()
+	await expect(page.getByText(/^Last edited /)).toHaveCount(0)
+	await expect(
+		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
+	).toBeVisible()
 	await page.keyboard.press('Escape')
 
 	await page.keyboard.press('r')
@@ -74,7 +77,9 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 
 	await page.keyboard.press('Meta+K')
 	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
-	await expect(page.getByText(/^Last edited /)).toBeVisible()
+	await expect(
+		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
+	).toBeVisible()
 })
 
 test('T2: Command+K page switcher follows dark mode', async ({ page }) => {
@@ -96,6 +101,28 @@ test('T2: Command+K page switcher follows dark mode', async ({ page }) => {
 		'background-color',
 		'rgb(20, 20, 22)'
 	)
+})
+
+test('T2: Command+K shows edited time on each page row', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('Meta+K')
+	await page.getByRole('option', { name: /Create new page/ }).click()
+	await expect
+		.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getPages().length))
+		.toBe(2)
+
+	await page.keyboard.press('Meta+K')
+
+	await expect(page.getByText(/^Last edited /)).toHaveCount(0)
+	await expect(
+		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
+	).toContainText(/^Edited /)
+	await expect(
+		page.getByRole('option', { name: /Page 2/ }).locator('.page-switcher__option-edited')
+	).toContainText(/^Edited /)
 })
 
 test('T2: Command+K opens Mermaid editor', async ({ page }) => {

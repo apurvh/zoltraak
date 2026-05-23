@@ -6,7 +6,6 @@ import { FileIcon, FilePlusIcon, WandIcon } from './icons'
 type PageSwitcherProps = {
 	currentPageId: string
 	isOpen: boolean
-	lastUpdatedAt: number
 	onClose: () => void
 	onCreatePage: (name: string) => void
 	onInsertDefaultImage: (image: DefaultImage) => void
@@ -26,13 +25,13 @@ function formatLastEdited(timestamp: number) {
 	const elapsedMs = Math.max(0, Date.now() - timestamp)
 	const elapsedMinutes = Math.floor(elapsedMs / 60_000)
 
-	if (elapsedMinutes < 1) return 'Last edited just now'
-	if (elapsedMinutes < 60) return `Last edited ${elapsedMinutes}m ago`
+	if (elapsedMinutes < 1) return 'Edited just now'
+	if (elapsedMinutes < 60) return `Edited ${elapsedMinutes}m ago`
 
 	const elapsedHours = Math.floor(elapsedMinutes / 60)
-	if (elapsedHours < 24) return `Last edited ${elapsedHours}h ago`
+	if (elapsedHours < 24) return `Edited ${elapsedHours}h ago`
 
-	return `Last edited ${new Intl.DateTimeFormat(undefined, {
+	return `Edited ${new Intl.DateTimeFormat(undefined, {
 		dateStyle: 'medium',
 		timeStyle: 'short',
 	}).format(new Date(timestamp))}`
@@ -100,7 +99,6 @@ function OptionButton({ icon, isHighlighted, label, meta, onClick, onMouseEnter 
 export function PageSwitcher({
 	currentPageId,
 	isOpen,
-	lastUpdatedAt,
 	onClose,
 	onCreatePage,
 	onInsertDefaultImage,
@@ -233,7 +231,6 @@ export function PageSwitcher({
 					ref={inputRef}
 					value={query}
 				/>
-				<div className="page-switcher__last-edited">{formatLastEdited(lastUpdatedAt)}</div>
 				<div aria-label="Pages" className="page-switcher__list" role="listbox">
 					{options.map((option, index) => {
 						const isHighlighted = index === highlightedIndex
@@ -289,9 +286,12 @@ export function PageSwitcher({
 									isHighlighted={isHighlighted}
 									label={option.page.name}
 									meta={
-										option.page.id === currentPageId ? (
-											<span className="page-switcher__option-meta">Current</span>
-										) : undefined
+										<div className="page-switcher__option-meta">
+											<span className="page-switcher__option-edited">
+												{formatLastEdited(option.page.updatedAt)}
+											</span>
+											{option.page.id === currentPageId ? <span>Current</span> : undefined}
+										</div>
 									}
 									onClick={() => switchToPage(option.page.id)}
 									onMouseEnter={() => handleMouseEnter(index)}

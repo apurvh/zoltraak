@@ -35,6 +35,7 @@ export type StoredAppState = Partial<
 export type ZoltraakPage = {
 	id: string
 	name: string
+	updatedAt: number
 	elements: readonly ExcalidrawElement[]
 	appState: StoredAppState
 	files: BinaryFiles
@@ -50,6 +51,7 @@ export type ZoltraakDocument = {
 export type PageSummary = {
 	id: string
 	name: string
+	updatedAt: number
 }
 
 interface ZoltraakDb extends DBSchema {
@@ -67,6 +69,7 @@ export function createBlankPage(name: string): ZoltraakPage {
 	return {
 		id: createId(),
 		name,
+		updatedAt: Date.now(),
 		elements: [],
 		appState: {
 			currentItemEndArrowhead: 'triangle_outline',
@@ -101,7 +104,7 @@ export function getCurrentPage(document: ZoltraakDocument) {
 }
 
 export function getPageSummaries(document: ZoltraakDocument): PageSummary[] {
-	return document.pages.map((page) => ({ id: page.id, name: page.name }))
+	return document.pages.map((page) => ({ id: page.id, name: page.name, updatedAt: page.updatedAt }))
 }
 
 export function getNextPageName(pages: PageSummary[]) {
@@ -149,8 +152,23 @@ export function withPageScene(
 	return {
 		...document,
 		pages: document.pages.map((page) =>
-			page.id === pageId ? { ...page, elements: [...elements], appState, files: { ...files } } : page
+			page.id === pageId
+				? { ...page, updatedAt: Date.now(), elements: [...elements], appState, files: { ...files } }
+				: page
 		),
+	}
+}
+
+function normalizeDocument(document: ZoltraakDocument): ZoltraakDocument {
+	const updatedAt = document.updatedAt ?? 0
+
+	return {
+		...document,
+		updatedAt,
+		pages: document.pages.map((page) => ({
+			...page,
+			updatedAt: page.updatedAt ?? updatedAt,
+		})),
 	}
 }
 
@@ -168,7 +186,7 @@ export async function loadDocument() {
 	const db = await getDb()
 	const document = await db.get(DOCUMENT_STORE, DOCUMENT_KEY)
 
-	return document ? { ...document, updatedAt: document.updatedAt ?? 0 } : createDefaultDocument()
+	return document ? normalizeDocument(document) : createDefaultDocument()
 }
 
 export async function saveDocument(document: ZoltraakDocument) {

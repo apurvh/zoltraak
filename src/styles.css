@@ -84,19 +84,6 @@ body {
 	color: #8f8f96;
 }
 
-.page-switcher__last-edited {
-	border-bottom: 1px solid rgb(20 20 20 / 8%);
-	padding: 8px 16px;
-	color: #707075;
-	font-size: 12px;
-	line-height: 1.3;
-}
-
-.page-switcher--dark .page-switcher__last-edited {
-	border-bottom-color: rgb(255 255 255 / 10%);
-	color: #a7a7ad;
-}
-
 .page-switcher__list {
 	max-height: min(360px, calc(100vh - 220px));
 	overflow-y: auto;
@@ -190,6 +177,9 @@ body {
 
 .page-switcher__option-meta {
 	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	gap: 12px;
 	padding: 0 10px;
 	color: #707075;
 	font-size: 12px;

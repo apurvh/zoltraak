@@ -436,7 +436,6 @@ export function App() {
 			<PageSwitcher
 				currentPageId={document.currentPageId}
 				isOpen={isPageSwitcherOpen}
-				lastUpdatedAt={document.updatedAt}
 				onClose={closePageSwitcher}
 				onCreatePage={createPage}
 				onInsertDefaultImage={handleInsertDefaultImage}
