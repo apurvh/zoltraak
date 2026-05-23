@@ -66,6 +66,9 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 	await expect(page.getByText(/^Last edited /)).toHaveCount(0)
 	await expect(
 		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
+	).not.toContainText('Edited')
+	await expect(
+		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited-icon')
 	).toBeVisible()
 	await page.keyboard.press('Escape')
 
@@ -79,6 +82,9 @@ test('T2: Command+K opens page switcher after drawing on the canvas', async ({ p
 	await expect(page.getByRole('dialog', { name: 'Page switcher' })).toBeVisible()
 	await expect(
 		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
+	).not.toContainText('Edited')
+	await expect(
+		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited-icon')
 	).toBeVisible()
 })
 
@@ -117,12 +123,15 @@ test('T2: Command+K shows edited time on each page row', async ({ page }) => {
 	await page.keyboard.press('Meta+K')
 
 	await expect(page.getByText(/^Last edited /)).toHaveCount(0)
-	await expect(
-		page.getByRole('option', { name: /Page 1/ }).locator('.page-switcher__option-edited')
-	).toContainText(/^Edited /)
-	await expect(
-		page.getByRole('option', { name: /Page 2/ }).locator('.page-switcher__option-edited')
-	).toContainText(/^Edited /)
+	const pageOneOption = page.getByRole('option', { name: /Page 1/ })
+	const pageTwoOption = page.getByRole('option', { name: /Page 2/ })
+
+	await expect(pageOneOption.locator('.page-switcher__option-edited')).not.toContainText('Edited')
+	await expect(pageTwoOption.locator('.page-switcher__option-edited')).not.toContainText('Edited')
+	await expect(pageOneOption.locator('.page-switcher__option-edited-icon')).toBeVisible()
+	await expect(pageTwoOption.locator('.page-switcher__option-edited-icon')).toBeVisible()
+	await expect(pageOneOption.locator('.page-switcher__option-content')).not.toContainText('Current')
+	await expect(pageTwoOption.locator('.page-switcher__option-content')).toContainText('Current')
 })
 
 test('T2: Command+K opens Mermaid editor', async ({ page }) => {

@@ -1,7 +1,7 @@
 import React from 'react'
 import { type DefaultImage, defaultImages, matchesDefaultImage } from '../lib/defaultImages'
 import { getNextPageName, type PageSummary } from '../lib/document'
-import { FileIcon, FilePlusIcon, WandIcon } from './icons'
+import { ClockIcon, FileIcon, FilePlusIcon, WandIcon } from './icons'
 
 type PageSwitcherProps = {
 	currentPageId: string
@@ -25,16 +25,16 @@ function formatLastEdited(timestamp: number) {
 	const elapsedMs = Math.max(0, Date.now() - timestamp)
 	const elapsedMinutes = Math.floor(elapsedMs / 60_000)
 
-	if (elapsedMinutes < 1) return 'Edited just now'
-	if (elapsedMinutes < 60) return `Edited ${elapsedMinutes}m ago`
+	if (elapsedMinutes < 1) return 'just now'
+	if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`
 
 	const elapsedHours = Math.floor(elapsedMinutes / 60)
-	if (elapsedHours < 24) return `Edited ${elapsedHours}h ago`
+	if (elapsedHours < 24) return `${elapsedHours}h ago`
 
-	return `Edited ${new Intl.DateTimeFormat(undefined, {
+	return new Intl.DateTimeFormat(undefined, {
 		dateStyle: 'medium',
 		timeStyle: 'short',
-	}).format(new Date(timestamp))}`
+	}).format(new Date(timestamp))
 }
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
@@ -73,9 +73,18 @@ type OptionButtonProps = {
 	meta?: React.ReactNode
 	onClick: () => void
 	onMouseEnter: () => void
+	titleMeta?: React.ReactNode
 }
 
-function OptionButton({ icon, isHighlighted, label, meta, onClick, onMouseEnter }: OptionButtonProps) {
+function OptionButton({
+	icon,
+	isHighlighted,
+	label,
+	meta,
+	onClick,
+	onMouseEnter,
+	titleMeta,
+}: OptionButtonProps) {
 	return (
 		<button
 			aria-selected={isHighlighted}
@@ -88,6 +97,7 @@ function OptionButton({ icon, isHighlighted, label, meta, onClick, onMouseEnter 
 			<div className="page-switcher__option-content">
 				{icon}
 				<span className="page-switcher__option-title">{label}</span>
+				{titleMeta}
 			</div>
 			{meta}
 		</button>
@@ -288,13 +298,18 @@ export function PageSwitcher({
 									meta={
 										<div className="page-switcher__option-meta">
 											<span className="page-switcher__option-edited">
+												<ClockIcon className="page-switcher__option-edited-icon" />
 												{formatLastEdited(option.page.updatedAt)}
 											</span>
-											{option.page.id === currentPageId ? <span>Current</span> : undefined}
 										</div>
 									}
 									onClick={() => switchToPage(option.page.id)}
 									onMouseEnter={() => handleMouseEnter(index)}
+									titleMeta={
+										option.page.id === currentPageId ? (
+											<span className="page-switcher__option-current">Current</span>
+										) : undefined
+									}
 								/>
 							)
 						}
