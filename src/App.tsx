@@ -360,7 +360,7 @@ export function App() {
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
-			const normalizedScene = normalizeSceneDefaults(elements)
+			const normalizedScene = normalizeSceneDefaults(elements, appState.editingTextElement?.id)
 
 			updatePageScene(
 				currentDocument.currentPageId,
