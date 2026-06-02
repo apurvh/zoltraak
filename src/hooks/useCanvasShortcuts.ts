@@ -56,6 +56,7 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 		function handlePageSwitcherShortcut(event: KeyboardEvent) {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault()
+				event.stopImmediatePropagation()
 				onOpenPageSwitcher()
 			}
 		}

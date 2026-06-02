@@ -90,3 +90,54 @@ test('T5: Auto Shape from Selection Drag', async ({ page }) => {
 		)
 		.toEqual({ count: 3, selectedCount: 1 })
 })
+
+test('T5: selecting a rectangle stays selected with many pages', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi)
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
+
+	for (let i = 0; i < 8; i += 1) {
+		await page.keyboard.press('Meta+K')
+		await page.getByRole('option', { name: /Create new page/ }).click()
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getPages().length)).toBe(i + 2)
+	}
+
+	await page.keyboard.press('Meta+K')
+	await page.getByPlaceholder('Search pages...').fill('Page 1')
+	await page.keyboard.press('Enter')
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
+
+	await page.keyboard.press('v')
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getCurrentToolId())).toBe('selection')
+	const clickPoint = await page.evaluate(() => {
+		const rectangle = window.__zoltraakTestApi!.getShapes()[0]
+		const appState = window.__zoltraakTestApi!.getAppState()
+		const zoom = appState.zoom?.value ?? 1
+		const props = rectangle.props as any
+
+		return {
+			x: (props.x + props.width / 2) * zoom + appState.scrollX,
+			y: props.y * zoom + appState.scrollY,
+		}
+	})
+	await page.mouse.click(clickPoint.x, clickPoint.y)
+	await page.waitForTimeout(250)
+
+	await expect
+		.poll(() =>
+			page.evaluate(() => ({
+				selectedCount: window.__zoltraakTestApi!.getSelectedShapeIds().length,
+				shapeCount: window.__zoltraakTestApi!.getShapes().length,
+				tool: window.__zoltraakTestApi!.getCurrentToolId(),
+			}))
+		)
+		.toEqual({ selectedCount: 1, shapeCount: 1, tool: 'selection' })
+})
