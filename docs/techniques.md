@@ -50,3 +50,22 @@ Quickly create rectangles or arrows by dragging in selection mode:
 - If your drag is wide and boxy, it creates a Rectangle.
 - Very small drags (< 15px) are ignored to prevent accidental shape creation.
 - If your drag intercepts and selects existing elements, no shape is created.
+
+## T6 - Horizontal Connections from Right Edges
+
+Create horizontal arrows by clicking an element's right edge:
+
+- In selection mode, the whole right edge of a shape, text element, or image can be clicked.
+- Show a thin blue highlight only while hovering over that edge.
+- Start the arrow at the clicked point on the right edge. Do not move the start to the middle of the edge.
+- Draw the arrow horizontally to the right at the same height as the click.
+- End the arrow at the first element's left edge that intersects this horizontal path.
+- Skip elements above or below the path, even if they are closer to the source.
+- If no left edge intersects the path, create no arrow.
+- Repeating the same connection creates no duplicate. Clicking at another height can create another arrow.
+- Show no connection notifications or tooltips, including for missed or repeated clicks.
+- Keep click positions correct after zooming, scrolling, or rotating an element.
+- Use normal arrow bindings, undo, redo, and saving.
+
+Implementation: `src/components/HorizontalConnectors.tsx` and `src/lib/horizontalConnections.ts`.
+Workflow tests: `tests/t6.spec.ts`.
