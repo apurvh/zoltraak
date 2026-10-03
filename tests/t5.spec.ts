@@ -1,5 +1,27 @@
 import { expect, test } from '@playwright/test'
 
+test('normalization does not reuse a shape that the editor has since changed', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+	const result = await page.evaluate(async () => {
+		const modulePath = '/src/lib/excalidrawScene.ts'
+		const { createSceneNormalizer } = await import(modulePath)
+		const normalize = createSceneNormalizer()
+		const source = { ...window.__zoltraakTestApi!.getShapes()[0].props, x: 100, roughness: 2 }
+		const normalized = normalize([source]).elements[0]
+		// The editor mutates the normalized object during a later drag.
+		normalized.x = 900
+		normalized.version += 1
+		return normalize([source]).elements[0].x
+	})
+	expect(result).toBe(100)
+})
+
 test('T5: Auto Shape from Selection Drag', async ({ page }) => {
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)

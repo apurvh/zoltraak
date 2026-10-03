@@ -168,6 +168,28 @@ export function normalizeSceneDefaults(
 	}
 }
 
+export function createSceneNormalizer() {
+	// Excalidraw can mutate an element in place, so check its version as well as identity.
+	const cache = new WeakMap<ExcalidrawElement, { version: number; editing: boolean; normalized: ExcalidrawElement; normalizedVersion: number }>()
+	return (elements: readonly ExcalidrawElement[], editingTextElementId?: string | null) => {
+		let changed = false
+		const normalizedElements = elements.map((element) => {
+			const editing = element.id === editingTextElementId
+			const cached = cache.get(element)
+			let normalized: ExcalidrawElement
+			if (cached && cached.version === element.version && cached.editing === editing && cached.normalized.version === cached.normalizedVersion) {
+				normalized = cached.normalized
+			} else {
+				normalized = normalizeSceneDefaults([element], editingTextElementId).elements[0]
+				cache.set(element, { version: element.version, editing, normalized, normalizedVersion: normalized.version })
+			}
+			if (normalized !== element) changed = true
+			return normalized
+		})
+		return { changed, elements: changed ? normalizedElements : elements }
+	}
+}
+
 export type SceneChange = {
 	elements: readonly ExcalidrawElement[]
 	appState: AppState

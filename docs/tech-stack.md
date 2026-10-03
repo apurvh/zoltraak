@@ -27,6 +27,10 @@ Keep app code limited to:
 
 Use an app-owned document model for pages. Each page stores Excalidraw elements, serializable app state, and files. Persist the document in IndexedDB with `idb` under the `zoltraak-canvas` key.
 
+IndexedDB version 2 stores document metadata under that key. Pages and image files use separate stores. Saves batch changes for up to 150 ms and write only changed pages and files. Old single-record documents migrate in one transaction. Other tabs receive changed pages and changed image files through BroadcastChannel.
+
+Production builds cache all app chunks and local fonts with a service worker. The Mermaid editor loads only when opened, but its chunks are cached in advance for offline use.
+
 Do not add Zustand or Dexie at first. Keep the document model in React state and IndexedDB. Add a separate store only for app preferences such as theme, palette choice, or toolbar configuration.
 
 ## Testing

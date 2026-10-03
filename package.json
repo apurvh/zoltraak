@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test:e2e": "playwright test"
+    "dev": "vite --config vite.config.ts",
+    "build": "tsc -b && vite build --config vite.config.ts",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:production": "npm run build && playwright test --config playwright.production.config.ts"
   },
   "dependencies": {
     "@excalidraw/excalidraw": "^0.18.1",

@@ -2,7 +2,7 @@ import React from 'react'
 import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, newElementWith } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI, PointerDownState } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement } from '@excalidraw/excalidraw/element/types'
-import { MermaidEditor, type MermaidSubmitResult } from './components/MermaidEditor'
+import type { MermaidSubmitResult } from './components/MermaidEditor'
 import { PageSwitcher } from './components/PageSwitcher'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
 import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
@@ -19,11 +19,15 @@ import {
 } from './lib/document'
 import {
 	loadPageIntoApi as loadExcalidrawPage,
-	normalizeSceneDefaults,
+	createSceneNormalizer,
 	pageInitialData,
 	sceneFromApi,
 } from './lib/excalidrawScene'
 import { installTestApi, uninstallTestApi } from './testing/installTestApi'
+
+const MermaidEditor = React.lazy(async () => ({
+	default: (await import('./components/MermaidEditor')).MermaidEditor,
+}))
 
 function createId() {
 	return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -36,6 +40,7 @@ export function App() {
 	const [mermaidEditingElementId, setMermaidEditingElementId] = React.useState<string | null>(null)
 	const [mermaidEditingSource, setMermaidEditingSource] = React.useState('')
 	const apiRef = React.useRef<ExcalidrawImperativeAPI | null>(null)
+	const normalizeScene = React.useMemo(createSceneNormalizer, [])
 	const lastPointerScenePositionRef = React.useRef<{ x: number; y: number } | null>(null)
 	const isApplyingExternalDocumentRef = React.useRef(false)
 	const applyExternalDocument = React.useCallback((nextDocument: ZoltraakDocument) => {
@@ -360,7 +365,7 @@ export function App() {
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
 
-			const normalizedScene = normalizeSceneDefaults(elements, appState.editingTextElement?.id)
+			const normalizedScene = normalizeScene(elements, appState.editingTextElement?.id)
 
 			updatePageScene(
 				currentDocument.currentPageId,
@@ -376,7 +381,7 @@ export function App() {
 				})
 			}
 		},
-		[documentRef, updatePageScene]
+		[documentRef, updatePageScene, normalizeScene]
 	)
 
 	const switchPage = React.useCallback(
@@ -444,14 +449,22 @@ export function App() {
 				pages={getPageSummaries(document)}
 				theme={currentPage?.appState?.theme === 'dark' ? 'dark' : 'light'}
 			/>
-			<MermaidEditor
-				editingElementId={mermaidEditingElementId}
-				initialSource={mermaidEditingSource}
-				isOpen={isMermaidEditorOpen}
-				theme={currentPage?.appState?.theme || 'light'}
-				onClose={closeMermaidEditor}
-				onSubmit={handleMermaidSubmit}
-			/>
+			{isMermaidEditorOpen && (
+				<React.Suspense fallback={
+					<div className="mermaid-editor-backdrop">
+						<div className="mermaid-editor" role="status">Loading diagram editor…</div>
+					</div>
+				}>
+					<MermaidEditor
+						editingElementId={mermaidEditingElementId}
+						initialSource={mermaidEditingSource}
+						isOpen={isMermaidEditorOpen}
+						theme={currentPage?.appState?.theme || 'light'}
+						onClose={closeMermaidEditor}
+						onSubmit={handleMermaidSubmit}
+					/>
+				</React.Suspense>
+			)}
 		</main>
 	)
 }

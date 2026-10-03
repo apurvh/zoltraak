@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 declare global {
 	interface Window {
-		__zoltraakStorageOpenAttempts?: number
+		__zoltraakStorageWriteAttempts?: number
 	}
 }
 
@@ -28,21 +28,18 @@ test('autosave keeps trying after a transient storage failure', async ({ page })
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
 	await page.evaluate(() => {
-		const originalOpen = window.indexedDB.open.bind(window.indexedDB)
+		const originalPut = IDBObjectStore.prototype.put
 		let shouldFail = true
-		window.__zoltraakStorageOpenAttempts = 0
-		Object.defineProperty(window.indexedDB, 'open', {
-			configurable: true,
-			value: (...args: Parameters<IDBFactory['open']>) => {
-				window.__zoltraakStorageOpenAttempts = (window.__zoltraakStorageOpenAttempts ?? 0) + 1
+		window.__zoltraakStorageWriteAttempts = 0
+		IDBObjectStore.prototype.put = function (...args) {
+				window.__zoltraakStorageWriteAttempts = (window.__zoltraakStorageWriteAttempts ?? 0) + 1
 				if (shouldFail) {
 					shouldFail = false
 					throw new DOMException('forced storage failure', 'InvalidStateError')
 				}
 
-				return originalOpen(...args)
-			},
-		})
+				return originalPut.apply(this, args)
+		}
 	})
 
 	await page.keyboard.press('r')
@@ -57,7 +54,7 @@ test('autosave keeps trying after a transient storage failure', async ({ page })
 	await page.mouse.up()
 
 	await expect
-		.poll(() => page.evaluate(() => window.__zoltraakStorageOpenAttempts ?? 0))
+		.poll(() => page.evaluate(() => window.__zoltraakStorageWriteAttempts ?? 0))
 		.toBeGreaterThan(1)
 })
 
@@ -94,4 +91,57 @@ test('stale tabs sync and do not overwrite drawings saved from another tab', asy
 	await expect
 		.poll(() => reloadTab.evaluate(() => window.__zoltraakTestApi!.getShapes().length))
 		.toBe(1)
+})
+
+test('existing version-one drawings and images migrate without losing data', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+	await page.keyboard.press('r')
+	await page.mouse.move(220, 180)
+	await page.mouse.down()
+	await page.mouse.move(420, 320)
+	await page.mouse.up()
+	const shape = await page.evaluate(() => window.__zoltraakTestApi!.getShapes()[0].props)
+	await page.route('**/legacy-fixture', (route) => route.fulfill({ contentType: 'text/html', body: '<html></html>' }))
+	await page.goto('/legacy-fixture')
+	const legacy = {
+		schemaVersion: 1, updatedAt: 100, currentPageId: 'legacy',
+		pages: [{ id: 'legacy', name: 'My old drawing', updatedAt: 100, elements: [shape], appState: {},
+			files: { legacyImage: { id: 'legacyImage', dataURL: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>', mimeType: 'image/svg+xml', created: 1 } },
+		}],
+	}
+	await page.evaluate(async (document) => {
+		await new Promise<void>((resolve) => { indexedDB.deleteDatabase('zoltraak').onsuccess = () => resolve() })
+		const db = await new Promise<IDBDatabase>((resolve) => {
+			const request = indexedDB.open('zoltraak', 1)
+			request.onupgradeneeded = () => request.result.createObjectStore('documents')
+			request.onsuccess = () => resolve(request.result)
+		})
+		const transaction = db.transaction('documents', 'readwrite')
+		transaction.objectStore('documents').put(document, 'zoltraak-canvas')
+		await new Promise<void>((resolve) => { transaction.oncomplete = () => resolve() })
+		db.close()
+	}, legacy)
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi?.getShapes().length === 1)
+	expect(await page.evaluate(() => window.__zoltraakTestApi!.getPages()[0].name)).toBe('My old drawing')
+	const stored = await page.evaluate(async () => {
+		const db = await new Promise<IDBDatabase>((resolve) => {
+			const request = indexedDB.open('zoltraak')
+			request.onsuccess = () => resolve(request.result)
+		})
+		const get = (store: string, key: IDBValidKey) => new Promise<any>((resolve) => {
+			const request = db.transaction(store).objectStore(store).get(key)
+			request.onsuccess = () => resolve(request.result)
+		})
+		const result = { metadata: await get('documents', 'zoltraak-canvas'), file: await get('files', ['legacy', 'legacyImage']), version: db.version }
+		db.close()
+		return result
+	})
+	expect(stored.version).toBe(2)
+	expect(stored.metadata.pages).toBeUndefined()
+	expect(stored.file.file.dataURL).toBe(legacy.pages[0].files.legacyImage.dataURL)
+	await page.reload()
+	await page.waitForFunction(() => window.__zoltraakTestApi?.getShapes().length === 1)
 })

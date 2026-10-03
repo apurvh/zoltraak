@@ -56,3 +56,14 @@ test('save queue writes reset after earlier queued saves complete', async () => 
 
 	expect(saved).toEqual(['stale', 'reset'])
 })
+
+test('a burst saves the latest snapshot and flush preserves reset order', async () => {
+	const saved: string[] = []
+	const queue = new SaveQueue<string>(async (value) => { saved.push(value) })
+	for (let index = 0; index < 100; index += 1) queue.schedule(`drawing-${index}`)
+	await queue.flush()
+	expect(saved).toEqual(['drawing-99'])
+	queue.schedule('final-drawing')
+	await queue.enqueue('reset')
+	expect(saved).toEqual(['drawing-99', 'final-drawing', 'reset'])
+})
