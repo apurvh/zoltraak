@@ -1,6 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
   <title>Cache</title>
-  <rect x="32" y="32" width="96" height="96" rx="8" stroke="#1f2937" stroke-width="2.8"/>
-  <path d="M52 16v16m28-16v16m28-16v16M52 128v16m28-16v16m28-16v16M16 52h16m-16 28h16m-16 28h16M128 52h16m-16 28h16m-16 28h16" stroke="#1f2937" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M88 48 60 84h20l-8 28 28-36H80l8-28Z" stroke="#1f2937" stroke-width="2.8" stroke-linejoin="round"/>
+  <g stroke="#1f2937" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M55 90 28 100Q26 102 29 104L77 127Q80 129 83 127L131 104Q134 102 132 100L105 90"/>
+    <path d="M55 64 28 74Q26 76 29 78L77 101Q80 103 83 101L131 78Q134 76 132 74L105 64"/>
+    <path d="M77 25Q80 23 83 25L131 48Q134 50 131 52L83 75Q80 77 77 75L29 52Q26 50 29 48Z"/>
+  </g>
 </svg>

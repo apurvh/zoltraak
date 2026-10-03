@@ -19,6 +19,7 @@ export type DefaultImage = {
 	assetUrl: string
 	dataUrl: string
 	height: number
+	fileVersion?: number
 	id: string
 	label: string
 	mimeType: 'image/svg+xml'
@@ -66,6 +67,7 @@ export const defaultImages: readonly DefaultImage[] = [
 		dataUrl: svgToDataUrl(cacheSvg),
 		height: 160,
 		id: 'cache',
+		fileVersion: 2,
 		label: 'Cache',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['cache', 'memory', 'redis', 'memcached'],
@@ -114,7 +116,7 @@ export const defaultImages: readonly DefaultImage[] = [
 ]
 
 export function getDefaultImageFileId(image: DefaultImage) {
-	return `default-image-${image.id}`
+	return `default-image-${image.id}${image.fileVersion ? `-v${image.fileVersion}` : ''}`
 }
 
 export function matchesDefaultImage(image: DefaultImage, query: string) {

@@ -2,6 +2,7 @@ import React from 'react'
 import { CaptureUpdateAction, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { defaultImages, getDefaultImageFileId } from '../lib/defaultImages'
+import { hasDefaultImageName } from '../lib/defaultImageLabels'
 import { DEFAULT_ARROWHEAD, SHAPE_ROUGHNESS } from '../lib/excalidrawScene'
 
 type UseCanvasShortcutsOptions = {
@@ -67,7 +68,10 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 				height: 0,
 				fileId: fileId as any,
 				status: 'saved',
-				customData: { defaultImageId: image.id },
+				customData: {
+					defaultImageId: image.id,
+					...(hasDefaultImageName(image.id) ? { needsDefaultLabel: true } : {}),
+				},
 			}])
 
 			// Use the native image placement flow. setActiveTool('image') opens a file picker.

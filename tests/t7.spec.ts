@@ -63,6 +63,7 @@ for (const { key, imageId, start, end } of [
 	{ key: 'q', imageId: 'queue', start: { x: 220, y: 180 }, end: { x: 420, y: 276 } },
 	{ key: 'c', imageId: 'cache', start: { x: 220, y: 180 }, end: { x: 420, y: 380 } },
 ]) {
+	const fileId = `default-image-${imageId}${imageId === 'cache' ? '-v2' : ''}`
 	test(`T7: ${key} draws the bundled ${imageId} with native image placement`, async ({ page }) => {
 		await page.goto('/')
 		await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
@@ -79,7 +80,7 @@ for (const { key, imageId, start, end } of [
 		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes()[0]?.props.width)).toBeGreaterThan(100)
 		await page.mouse.up()
 
-		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().map((shape) => ({
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().filter((shape) => shape.type === 'image').map((shape) => ({
 			type: shape.type,
 			fileId: shape.props.fileId,
 			customData: shape.props.customData,
@@ -89,8 +90,8 @@ for (const { key, imageId, start, end } of [
 			height: shape.props.height,
 		})))).toEqual([{
 			type: 'image',
-			fileId: `default-image-${imageId}`,
-			customData: { defaultImageId: imageId },
+			fileId,
+			customData: expect.objectContaining({ defaultImageId: imageId }),
 			x: expect.closeTo(Math.min(start.x, end.x), 2),
 			y: expect.closeTo(Math.min(start.y, end.y), 2),
 			width: expect.closeTo(Math.abs(end.x - start.x), 2),
@@ -99,15 +100,16 @@ for (const { key, imageId, start, end } of [
 		await expect.poll(() => page.evaluate(() => ({
 			tool: window.__zoltraakTestApi!.getCurrentToolId(),
 			selectedCount: window.__zoltraakTestApi!.getSelectedShapeIds().length,
-		}))).toEqual({ tool: 'selection', selectedCount: 1 })
+		}))).toEqual({ tool: 'selection', selectedCount: imageId === 'stick-user' ? 1 : 2 })
+		const expectedCount = imageId === 'stick-user' ? 1 : 2
 
 		await page.getByRole('button', { name: 'Undo', exact: true }).click()
 		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(0)
 		await page.getByRole('button', { name: 'Redo', exact: true }).click()
-		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(1)
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(expectedCount)
 		await page.reload()
 		await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
-		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes()[0]?.props.fileId)).toBe(`default-image-${imageId}`)
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes()[0]?.props.fileId)).toBe(fileId)
 	})
 }
 
@@ -123,7 +125,7 @@ test('T7: image shortcuts can be replaced or cancelled and do not intercept typi
 	await page.keyboard.press('q')
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().map((shape) => shape.props.fileId))).toEqual(['default-image-queue'])
 	await page.keyboard.press('c')
-	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().map((shape) => shape.props.fileId))).toEqual(['default-image-cache'])
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().map((shape) => shape.props.fileId))).toEqual(['default-image-cache-v2'])
 	await page.keyboard.press('Escape')
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(0)
 

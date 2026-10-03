@@ -130,11 +130,11 @@ test('T6: clickable edges support images, drawing modes, zoom, and scrolling', a
 	await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
 	await draw(page, 's', 250, 200, 160, 160)
 	await draw(page, 'd', 650, 200, 160, 160)
-	await expect(page.locator('.right-edge-connector')).toHaveCount(2)
+	await expect(page.locator('.right-edge-connector')).toHaveCount(3)
 	await page.keyboard.press('r')
 	await expect(page.locator('.right-edge-connector')).toHaveCount(0)
 	await page.keyboard.press('v')
-	await expect(page.locator('.right-edge-connector')).toHaveCount(2)
+	await expect(page.locator('.right-edge-connector')).toHaveCount(3)
 	await page.evaluate(() => window.__zoltraakTestApi!.updateScene({ appState: { zoom: { value: 0.75 }, scrollX: 40, scrollY: 20 } }))
 	const expected = await page.evaluate(() => {
 		const shape = window.__zoltraakTestApi!.getShapes()[0]
@@ -158,5 +158,5 @@ test('T6: clickable edges support images, drawing modes, zoom, and scrolling', a
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().filter((shape) => shape.type === 'arrow').length)).toBe(1)
 	await page.locator('.right-edge-connector').last().click()
 	await expect(page.getByText('No element to the right.')).toHaveCount(0)
-	expect(await page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(3)
+	expect(await page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(4)
 })

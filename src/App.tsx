@@ -9,6 +9,8 @@ import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
 import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
 import { useZoltraakDocument } from './hooks/useZoltraakDocument'
 import { getDefaultImageFileId, type DefaultImage } from './lib/defaultImages'
+import { finishDefaultImagePlacement, withDefaultImageLabel } from './lib/defaultImageLabels'
+import { useDefaultImageLabelEditing } from './hooks/useDefaultImageLabelEditing'
 import {
 	createBlankPage,
 	getCurrentPage,
@@ -70,6 +72,7 @@ export function App() {
 		apiRef,
 		onOpenPageSwitcher: openPageSwitcher,
 	})
+	useDefaultImageLabelEditing(apiRef)
 
 	const loadPageIntoCurrentApi = React.useCallback((page: ZoltraakPage) => {
 		const currentApi = apiRef.current
@@ -134,6 +137,10 @@ export function App() {
 
 	const handlePointerUp = React.useCallback(
 		(activeTool: AppState['activeTool'], pointerDownState: PointerDownState) => {
+			if (activeTool.type === 'image' && apiRef.current) {
+				finishDefaultImagePlacement(apiRef.current)
+				return
+			}
 			if (activeTool.type !== 'selection') return
 
 			const currentApi = apiRef.current
@@ -270,7 +277,7 @@ export function App() {
 
 			const elements = currentApi.getSceneElements()
 			currentApi.updateScene({
-				elements: [...elements, imageElement],
+				elements: [...elements, ...withDefaultImageLabel(imageElement as ExcalidrawImageElement)],
 				captureUpdate: CaptureUpdateAction.IMMEDIATELY,
 			})
 		},

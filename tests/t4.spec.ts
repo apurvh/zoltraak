@@ -73,13 +73,18 @@ for (const { imageId, label, width, height } of [
 			)
 			.toEqual([
 				expect.objectContaining({
-					fileId: `default-image-${imageId}`,
+					fileId: `default-image-${imageId}${imageId === 'cache' ? '-v2' : ''}`,
 					height,
 					width,
 					x: expect.closeTo(cursor.x - width / 2, 2),
 					y: expect.closeTo(cursor.y - height / 2, 2),
 				}),
 			])
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().find((shape) => shape.type === 'text')?.props.text)).toBe(label)
+		await page.getByRole('button', { name: 'Undo', exact: true }).click()
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(0)
+		await page.getByRole('button', { name: 'Redo', exact: true }).click()
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(2)
 
 		await page.reload()
 		await page.waitForFunction(() => window.__zoltraakTestApi)

@@ -40,6 +40,11 @@ Insert bundled default images from the command palette:
 - Matching default image results appear with an image icon and label.
 - Press `Enter` on a default image result to insert it onto the canvas at the current cursor position.
 - If no cursor position is available, insert the image at the current viewport center.
+- Cache uses three stacked diamonds with dark lines in light mode and light lines in dark mode.
+- Cache, Database, and Queue include their default names as centered text below the image.
+- Account for empty space inside the artwork so Cache and Database names have the same visual gap as Queue.
+- Group the image and name so they move together. Double-click the name to edit it with the canvas text editor.
+- Keep edited names when saving, reloading, copying, or undoing and redoing changes.
 
 ## T5 - Auto Shape from Selection
 
