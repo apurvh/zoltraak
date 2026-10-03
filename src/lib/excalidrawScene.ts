@@ -21,26 +21,32 @@ export function pageInitialData(page: ZoltraakPage) {
 	}
 }
 
-function pageUpdateAppState(page: ZoltraakPage) {
+function pageUpdateAppState(page: ZoltraakPage, appState: AppState) {
 	return {
 		...page.appState,
 		selectedElementIds: {},
+		pendingImageElementId: null,
+		...(appState.pendingImageElementId
+			? { activeTool: { type: 'selection', customType: null, locked: false, lastActiveTool: null } }
+			: {}),
 	} as Parameters<ExcalidrawImperativeAPI['updateScene']>[0]['appState']
 }
 
 export function sceneFromApi(api: ExcalidrawImperativeAPI) {
+	const appState = api.getAppState()
 	return {
-		elements: api.getSceneElements(),
-		appState: serializeAppState(api.getAppState()),
+		elements: api.getSceneElements().filter((element) => element.id !== appState.pendingImageElementId),
+		appState: serializeAppState(appState),
 		files: api.getFiles(),
 	}
 }
 
 export function loadPageIntoApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage) {
+	const appState = api.getAppState()
 	api.addFiles(Object.values(page.files))
 	api.updateScene({
 		elements: page.elements,
-		appState: pageUpdateAppState(page),
+		appState: pageUpdateAppState(page, appState),
 		captureUpdate: CaptureUpdateAction.NEVER,
 	})
 	api.history.clear()

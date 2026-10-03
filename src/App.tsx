@@ -361,6 +361,14 @@ export function App() {
 			files: BinaryFiles
 		) => {
 			if (isApplyingExternalDocumentRef.current) return
+			if (appState.pendingImageElementId && appState.activeTool.type !== 'image') {
+				apiRef.current?.updateScene({
+					elements: elements.filter((element) => element.id !== appState.pendingImageElementId),
+					appState: { pendingImageElementId: null },
+					captureUpdate: CaptureUpdateAction.NEVER,
+				})
+				return
+			}
 
 			const currentDocument = documentRef.current
 			if (!currentDocument) return
@@ -369,7 +377,9 @@ export function App() {
 
 			updatePageScene(
 				currentDocument.currentPageId,
-				normalizedScene.elements,
+				appState.pendingImageElementId
+					? normalizedScene.elements.filter((element) => element.id !== appState.pendingImageElementId)
+					: normalizedScene.elements,
 				serializeAppState(appState),
 				files
 			)

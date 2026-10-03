@@ -1,5 +1,7 @@
 import React from 'react'
+import { CaptureUpdateAction, convertToExcalidrawElements } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import { defaultImages, getDefaultImageFileId } from '../lib/defaultImages'
 import { DEFAULT_ARROWHEAD, SHAPE_ROUGHNESS } from '../lib/excalidrawScene'
 
 type UseCanvasShortcutsOptions = {
@@ -19,6 +21,65 @@ function isTextInputTarget(target: EventTarget | null) {
 }
 
 export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShortcutsOptions) {
+	React.useEffect(() => {
+		function handleImageShortcut(event: KeyboardEvent) {
+			if (isTextInputTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+			const imageId = event.key === 's' ? 'stick-user' : event.key === 'd' ? 'database' : null
+			if (!imageId) return
+
+			const api = apiRef.current
+			if (!api) return
+			const appState = api.getAppState()
+			if (appState.viewModeEnabled || appState.newElement || appState.selectionElement || appState.editingTextElement || appState.openDialog) return
+
+			event.preventDefault()
+			event.stopImmediatePropagation()
+			if (event.repeat) return
+
+			const image = defaultImages.find((image) => image.id === imageId)!
+			const fileId = getDefaultImageFileId(image)
+			const [element] = convertToExcalidrawElements([{
+				type: 'image',
+				x: 0,
+				y: 0,
+				width: 0,
+				height: 0,
+				fileId: fileId as any,
+				status: 'saved',
+				customData: { defaultImageId: image.id },
+			}])
+
+			// Use the native image placement flow. setActiveTool('image') opens a file picker.
+			api.updateScene({
+				elements: [
+					...api.getSceneElementsIncludingDeleted().filter((element) => element.id !== appState.pendingImageElementId),
+					element,
+				],
+				appState: {
+					activeTool: { type: 'image', customType: null, locked: false, lastActiveTool: null },
+					pendingImageElementId: element.id,
+					selectedElementIds: {},
+					selectedGroupIds: {},
+					editingGroupId: null,
+					multiElement: null,
+				},
+				captureUpdate: CaptureUpdateAction.EVENTUALLY,
+			})
+			const now = Date.now()
+			api.addFiles([{
+				id: fileId as any,
+				dataURL: image.dataUrl as any,
+				mimeType: image.mimeType,
+				created: now,
+				lastRetrieved: now,
+			}])
+			api.setCursor('crosshair')
+		}
+
+		window.addEventListener('keydown', handleImageShortcut, { capture: true })
+		return () => window.removeEventListener('keydown', handleImageShortcut, { capture: true })
+	}, [apiRef])
+
 	React.useEffect(() => {
 		function handleKeyDown(event: KeyboardEvent) {
 			if (isTextInputTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey) return
