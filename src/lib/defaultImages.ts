@@ -1,3 +1,4 @@
+import cacheAssetUrl from '../assets/default-images/cache.svg'
 import databaseAssetUrl from '../assets/default-images/database.svg'
 import mobileAppAssetUrl from '../assets/default-images/mobile-app.svg'
 import objectStorageBucketAssetUrl from '../assets/default-images/object-storage-bucket.svg'
@@ -5,6 +6,7 @@ import queueAssetUrl from '../assets/default-images/queue.svg'
 import stickAdminAssetUrl from '../assets/default-images/stick-admin.svg'
 import stickUserAssetUrl from '../assets/default-images/stick-user.svg'
 import webAppAssetUrl from '../assets/default-images/web-app.svg'
+import cacheSvg from '../assets/default-images/cache.svg?raw'
 import databaseSvg from '../assets/default-images/database.svg?raw'
 import mobileAppSvg from '../assets/default-images/mobile-app.svg?raw'
 import objectStorageBucketSvg from '../assets/default-images/object-storage-bucket.svg?raw'
@@ -57,6 +59,16 @@ export const defaultImages: readonly DefaultImage[] = [
 		label: 'Database',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['database', 'db', 'storage', 'data'],
+		width: 160,
+	},
+	{
+		assetUrl: cacheAssetUrl,
+		dataUrl: svgToDataUrl(cacheSvg),
+		height: 160,
+		id: 'cache',
+		label: 'Cache',
+		mimeType: 'image/svg+xml',
+		searchTerms: ['cache', 'memory', 'redis', 'memcached'],
 		width: 160,
 	},
 	{

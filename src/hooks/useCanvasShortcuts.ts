@@ -9,6 +9,13 @@ type UseCanvasShortcutsOptions = {
 	onOpenPageSwitcher: () => void
 }
 
+const imageShortcuts: Readonly<Record<string, string>> = {
+	s: 'stick-user',
+	d: 'database',
+	q: 'queue',
+	c: 'cache',
+}
+
 function isTextInputTarget(target: EventTarget | null) {
 	if (!(target instanceof HTMLElement)) return false
 
@@ -22,19 +29,33 @@ function isTextInputTarget(target: EventTarget | null) {
 
 export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShortcutsOptions) {
 	React.useEffect(() => {
-		function handleImageShortcut(event: KeyboardEvent) {
+		function handleCanvasShortcut(event: KeyboardEvent) {
 			if (isTextInputTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
-			const imageId = event.key === 's' ? 'stick-user' : event.key === 'd' ? 'database' : null
-			if (!imageId) return
+			const imageId = imageShortcuts[event.key]
+			if (!imageId && event.key !== 'z') return
 
 			const api = apiRef.current
 			if (!api) return
 			const appState = api.getAppState()
-			if (appState.viewModeEnabled || appState.newElement || appState.selectionElement || appState.editingTextElement || appState.openDialog) return
+			if ((imageId && appState.viewModeEnabled) || appState.newElement || appState.selectionElement || appState.editingTextElement || appState.openDialog) return
 
 			event.preventDefault()
 			event.stopImmediatePropagation()
 			if (event.repeat) return
+			if (event.key === 'z') {
+				// Match Reset Zoom: keep the scene point at the viewport center in place.
+				const zoomOffset = 1 - 1 / appState.zoom.value
+				api.updateScene({
+					appState: {
+						zoom: { value: 1 as typeof appState.zoom.value },
+						scrollX: appState.scrollX + appState.width / 2 * zoomOffset,
+						scrollY: appState.scrollY + appState.height / 2 * zoomOffset,
+						userToFollow: null,
+					},
+					captureUpdate: CaptureUpdateAction.EVENTUALLY,
+				})
+				return
+			}
 
 			const image = defaultImages.find((image) => image.id === imageId)!
 			const fileId = getDefaultImageFileId(image)
@@ -76,8 +97,8 @@ export function useCanvasShortcuts({ apiRef, onOpenPageSwitcher }: UseCanvasShor
 			api.setCursor('crosshair')
 		}
 
-		window.addEventListener('keydown', handleImageShortcut, { capture: true })
-		return () => window.removeEventListener('keydown', handleImageShortcut, { capture: true })
+		window.addEventListener('keydown', handleCanvasShortcut, { capture: true })
+		return () => window.removeEventListener('keydown', handleCanvasShortcut, { capture: true })
 	}, [apiRef])
 
 	React.useEffect(() => {

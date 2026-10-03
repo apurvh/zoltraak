@@ -33,10 +33,10 @@ Insert Mermaid diagrams as editable image elements on the canvas:
 Insert bundled default images from the command palette:
 
 - Store bundled default images under `src/assets/default-images/`.
-- Use one file per default image, such as `stick-user.svg`, `stick-admin.svg`, `database.svg`, `queue.svg`, `web-app.svg`, `mobile-app.svg`, and `object-storage-bucket.svg`.
+- Use one file per default image, such as `stick-user.svg`, `stick-admin.svg`, `database.svg`, `queue.svg`, `cache.svg`, `web-app.svg`, `mobile-app.svg`, and `object-storage-bucket.svg`.
 - Keep searchable image metadata in app code, ideally `src/lib/defaultImages.ts`, with each image's id, label, search terms, asset path, MIME type, and default canvas size.
 - Press `Command+K` to open the command palette.
-- Search for terms such as `stick user`, `stick admin`, `database`, `queue`, `web app`, `mobile app`, or `object storage bucket`.
+- Search for terms such as `stick user`, `stick admin`, `database`, `queue`, `cache`, `web app`, `mobile app`, or `object storage bucket`.
 - Matching default image results appear with an image icon and label.
 - Press `Enter` on a default image result to insert it onto the canvas at the current cursor position.
 - If no cursor position is available, insert the image at the current viewport center.
@@ -69,3 +69,34 @@ Create horizontal arrows by clicking an element's right edge:
 
 Implementation: `src/components/HorizontalConnectors.tsx` and `src/lib/horizontalConnections.ts`.
 Workflow tests: `tests/t6.spec.ts`.
+
+## T7 - Custom Keyboard Shortcuts
+
+Keep all custom shortcuts in this spec:
+
+| Where | Shortcut | Action |
+| --- | --- | --- |
+| Canvas | `r` | Draw a rectangle. |
+| Canvas | `a` | Draw an arrow. |
+| Canvas | `s` | Draw the bundled Stick User image. |
+| Canvas | `d` | Draw the bundled Database image. |
+| Canvas | `q` | Draw the bundled Queue image. |
+| Canvas | `c` | Draw the bundled Cache image. |
+| Canvas | `z` | Reset zoom to exactly 100%. |
+| Anywhere in the app | `Command+K` or `Ctrl+K` | Open the page switcher. |
+| Page switcher | `ArrowUp` / `ArrowDown` | Move between results. |
+| Page switcher | `Enter` | Choose the highlighted result. |
+| Page switcher | `Escape` | Close the page switcher. |
+| Mermaid editor | `Command+Enter` or `Ctrl+Enter` | Insert or update the diagram. |
+| Mermaid editor, Vim normal mode | `s` | Start Flash search and jump. |
+
+- For `r`, `a`, `s`, `d`, `q`, and `c`, press the key, then drag on the canvas to place and size the element.
+- `q` and `c` use the same image placement flow as `s` and `d`. `q` replaces the editor's default tool-lock shortcut. `c` replaces its ellipse shortcut.
+- `z` acts like the Reset Zoom button. Both 50% and 200% become 100%. At 100%, zoom stays at 100%.
+- Keep the same scene point at the viewport center when resetting zoom.
+- Resetting zoom does not switch the active tool or change the selection.
+- Ignore single-key canvas shortcuts while typing in text fields or editable content. Keep modified shortcuts such as undo working normally.
+- Image placement supports cancellation, undo, redo, saving, and page changes.
+
+Canvas shortcut implementation: `src/hooks/useCanvasShortcuts.ts`.
+Workflow tests: `tests/t7.spec.ts`. Page switcher and Mermaid workflows also have tests in `tests/t2.spec.ts` and `tests/t3.spec.ts`.
