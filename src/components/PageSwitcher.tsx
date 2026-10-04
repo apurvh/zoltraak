@@ -39,9 +39,10 @@ function formatLastEdited(timestamp: number) {
 
 function getFilteredPageOptions(pages: PageSummary[], query: string) {
 	const normalizedQuery = query.trim().toLowerCase()
+	const sortedPages = [...pages].sort((a, b) => b.updatedAt - a.updatedAt)
 	const filteredPages = normalizedQuery
-		? pages.filter((page) => page.name.toLowerCase().includes(normalizedQuery))
-		: pages
+		? sortedPages.filter((page) => page.name.toLowerCase().includes(normalizedQuery))
+		: sortedPages
 	const filteredCommands = normalizedQuery
 		? commandOptions.filter((command) => command.label.toLowerCase().includes(normalizedQuery))
 		: commandOptions
@@ -72,7 +73,7 @@ type OptionButtonProps = {
 	label: string
 	meta?: React.ReactNode
 	onClick: () => void
-	onMouseEnter: () => void
+	onMouseMove: () => void
 	titleMeta?: React.ReactNode
 }
 
@@ -82,7 +83,7 @@ function OptionButton({
 	label,
 	meta,
 	onClick,
-	onMouseEnter,
+	onMouseMove,
 	titleMeta,
 }: OptionButtonProps) {
 	return (
@@ -90,7 +91,7 @@ function OptionButton({
 			aria-selected={isHighlighted}
 			className="page-switcher__option"
 			onClick={onClick}
-			onMouseEnter={onMouseEnter}
+			onMouseMove={onMouseMove}
 			role="option"
 			type="button"
 		>
@@ -189,7 +190,7 @@ export function PageSwitcher({
 	const firstImageIndex = options.findIndex((o) => o.type === 'default-image')
 	const firstPageIndex = options.findIndex((o) => o.type === 'page')
 
-	const handleMouseEnter = (index: number) => {
+	const handleMouseMove = (index: number) => {
 		hasNavigatedOptionsRef.current = true
 		setHighlightedIndex(index)
 	}
@@ -257,7 +258,7 @@ export function PageSwitcher({
 									isHighlighted={isHighlighted}
 									label={option.label}
 									onClick={openMermaidToExcalidraw}
-									onMouseEnter={() => handleMouseEnter(index)}
+									onMouseMove={() => handleMouseMove(index)}
 								/>
 							)
 						} else if (option.type === 'default-image') {
@@ -274,7 +275,7 @@ export function PageSwitcher({
 									isHighlighted={isHighlighted}
 									label={option.image.label}
 									onClick={() => insertDefaultImage(option.image)}
-									onMouseEnter={() => handleMouseEnter(index)}
+									onMouseMove={() => handleMouseMove(index)}
 								/>
 							)
 						} else if (option.type === 'create') {
@@ -285,7 +286,7 @@ export function PageSwitcher({
 									isHighlighted={isHighlighted}
 									label={query.trim() ? `Create new page "${query.trim()}"` : 'Create new page'}
 									onClick={createPage}
-									onMouseEnter={() => handleMouseEnter(index)}
+									onMouseMove={() => handleMouseMove(index)}
 								/>
 							)
 						} else {
@@ -304,7 +305,7 @@ export function PageSwitcher({
 										</div>
 									}
 									onClick={() => switchToPage(option.page.id)}
-									onMouseEnter={() => handleMouseEnter(index)}
+									onMouseMove={() => handleMouseMove(index)}
 									titleMeta={
 										option.page.id === currentPageId ? (
 											<span className="page-switcher__option-current">Current</span>

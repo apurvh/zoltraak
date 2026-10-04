@@ -14,6 +14,7 @@ Use a command palette to switch between Excalidraw-backed pages:
 
 - Press `Command+K` to open the page switcher.
 - Search filters the existing pages.
+- Show pages by last edited date, newest first, including search results.
 - Press `Enter` on a page result to switch to that page.
 - Use the create option to create a new page and switch to it.
 - Press `Escape` or click outside the palette to close it.
