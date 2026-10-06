@@ -1,4 +1,4 @@
-import { CaptureUpdateAction, ROUNDNESS, newElementWith } from '@excalidraw/excalidraw'
+import { CaptureUpdateAction, ROUNDNESS, convertToExcalidrawElements, restoreElements, newElementWith } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawTextElement } from '@excalidraw/excalidraw/element/types'
 import { serializeAppState, type ZoltraakPage } from './document'
@@ -52,38 +52,62 @@ export function loadPageIntoApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage
 	api.history.clear()
 }
 
-let _measureCanvas: HTMLCanvasElement | null = null
+// Text decoration must use the same wrapping and geometry as the canvas/editor.
+type TextLayoutCache = WeakMap<ExcalidrawElement, { version: number; containerVersion?: number }>
 
-// Mirror Excalidraw's getFontFamilyString logic (chunk-4FTI6OG3.js:1129-1138)
-// fontFamily values: 1=Virgil, 2=Helvetica, 3=Cascadia, 5=Excalifont(default), 6=Nunito, 7=Lilita One, 8=Comic Shanns, 9=Liberation Sans
-const EXCALIDRAW_FONT_FAMILY_STRINGS: Record<number, string> = {
-	1: 'Virgil, Segoe UI Emoji',
-	2: 'Helvetica, Segoe UI Emoji',
-	3: 'Cascadia, Segoe UI Emoji',
-	5: 'Excalifont, Xiaolai, Segoe UI Emoji',
-	6: 'Nunito, Segoe UI Emoji',
-	7: 'Lilita One, Segoe UI Emoji',
-	8: 'Comic Shanns, Segoe UI Emoji',
-	9: 'Liberation Sans, Segoe UI Emoji',
-}
-
-function measureTextWidth(text: string, fontSize: number, fontFamily: number): number {
-	if (!_measureCanvas) {
-		_measureCanvas = document.createElement('canvas')
+function normalizeAgentText(elements: readonly ExcalidrawElement[], editingTextElementId?: string | null, cache?: TextLayoutCache) {
+	const updates = new Map<string, ExcalidrawElement>()
+	const elementsById = new Map(elements.map((element) => [element.id, element]))
+	for (const element of elements) {
+		if (element.type !== 'text' || element.isDeleted || element.id === editingTextElementId) continue
+		const source = element.originalText ?? element.text
+		const hasPrefix = source.startsWith('✨ ')
+		const hasAgent = /agent/i.test(source)
+		if (!hasAgent && !hasPrefix) continue
+		const text = hasAgent ? (hasPrefix ? source : `✨ ${source}`) : source.slice(2)
+		const candidate = element.containerId ? elementsById.get(element.containerId) : undefined
+		const container = candidate?.isDeleted ? undefined : candidate
+		const cached = cache?.get(element)
+		if (cached?.version === element.version && cached.containerVersion === container?.version) continue
+		if (container && (container.type === 'rectangle' || container.type === 'ellipse' || container.type === 'diamond' || container.type === 'arrow')) {
+			const label = { ...element, text, originalText: text }
+			const [laidOutContainer, laidOutText] = convertToExcalidrawElements([{
+				...container,
+				boundElements: container.boundElements?.filter((bound) => bound.id !== element.id),
+				label,
+			}], { regenerateIds: false })
+			if (container.width !== laidOutContainer.width || container.height !== laidOutContainer.height) updates.set(container.id, newElementWith(container, {
+				x: laidOutContainer.x, y: laidOutContainer.y,
+				width: laidOutContainer.width, height: laidOutContainer.height,
+			}))
+			if (element.text !== (laidOutText as ExcalidrawTextElement).text || element.originalText !== text ||
+				element.x !== laidOutText.x || element.y !== laidOutText.y || element.width !== laidOutText.width || element.height !== laidOutText.height) updates.set(element.id, newElementWith(element, {
+				text: (laidOutText as ExcalidrawTextElement).text, originalText: text,
+				x: laidOutText.x, y: laidOutText.y, width: laidOutText.width, height: laidOutText.height,
+			}))
+		} else {
+			const [laidOutText] = restoreElements([{ ...element, text, originalText: text }], null,
+				{ repairBindings: true, refreshDimensions: true })
+			if (element.text !== (laidOutText as ExcalidrawTextElement).text || element.originalText !== text ||
+				element.width !== laidOutText.width || element.height !== laidOutText.height) updates.set(element.id, newElementWith(element, {
+				text: (laidOutText as ExcalidrawTextElement).text, originalText: text,
+				width: laidOutText.width, height: laidOutText.height,
+			}))
+		}
+		if (!updates.has(element.id) && (!container || !updates.has(container.id))) {
+			cache?.set(element, { version: element.version, containerVersion: container?.version })
+		}
 	}
-	const ctx = _measureCanvas.getContext('2d')
-	if (!ctx) return 0
-	const familyString = EXCALIDRAW_FONT_FAMILY_STRINGS[fontFamily] ?? 'Excalifont, Xiaolai, Segoe UI Emoji'
-	ctx.font = `${fontSize}px ${familyString}`
-	return ctx.measureText(text).width
+	return updates.size ? elements.map((element) => updates.get(element.id) ?? element) : elements
 }
 
 export function normalizeSceneDefaults(
 	elements: readonly ExcalidrawElement[],
 	editingTextElementId?: string | null
 ) {
-	let changed = false
-	const normalizedElements = elements.map((element) => {
+	const decoratedElements = normalizeAgentText(elements, editingTextElementId)
+	let changed = decoratedElements !== elements
+	const normalizedElements = decoratedElements.map((element) => {
 		if (element.type === 'rectangle') {
 			if (
 				element.roughness === SHAPE_ROUGHNESS &&
@@ -112,59 +136,6 @@ export function normalizeSceneDefaults(
 			})
 		}
 
-		if (element.type === 'text') {
-			const el = element as ExcalidrawTextElement
-
-			// Don't transform while the user is actively typing in this element
-			if (editingTextElementId === el.id) return element
-
-			// Use originalText as source of truth — text may be wrapped inside containers
-			const sourceText = el.originalText ?? el.text
-			const hasAgent = /agent/i.test(sourceText)
-			const hasPrefix = sourceText.startsWith('✨ ')
-
-			if (hasAgent && !hasPrefix) {
-				changed = true
-				const newOriginalText = `✨ ${sourceText}`
-				if (el.containerId !== null) {
-					// Bound text: set originalText and text to unwrapped prefixed string;
-					// Excalidraw will re-wrap on next layout pass
-					return newElementWith(el, {
-						text: newOriginalText,
-						originalText: newOriginalText,
-					})
-				}
-				const newText = `✨ ${el.text}`
-				const newWidth = Math.max(el.width, measureTextWidth(newText, el.fontSize, el.fontFamily))
-				return newElementWith(el, {
-					text: newText,
-					originalText: newOriginalText,
-					width: newWidth,
-				})
-			}
-
-			if (!hasAgent && hasPrefix) {
-				changed = true
-				const newOriginalText = sourceText.slice(2)
-				if (el.containerId !== null) {
-					// Bound text: set originalText and text to unwrapped stripped string
-					return newElementWith(el, {
-						text: newOriginalText,
-						originalText: newOriginalText,
-					})
-				}
-				const newText = el.text.startsWith('✨ ') ? el.text.slice(2) : el.text
-				const newWidth = measureTextWidth(newText, el.fontSize, el.fontFamily)
-				return newElementWith(el, {
-					text: newText,
-					originalText: newOriginalText,
-					width: newWidth,
-				})
-			}
-
-			return element
-		}
-
 		return element
 	})
 
@@ -177,16 +148,18 @@ export function normalizeSceneDefaults(
 export function createSceneNormalizer() {
 	// Excalidraw can mutate an element in place, so check its version as well as identity.
 	const cache = new WeakMap<ExcalidrawElement, { version: number; editing: boolean; normalized: ExcalidrawElement; normalizedVersion: number }>()
+	const textLayoutCache: TextLayoutCache = new WeakMap()
 	return (elements: readonly ExcalidrawElement[], editingTextElementId?: string | null) => {
-		let changed = false
-		const normalizedElements = elements.map((element) => {
+		const decoratedElements = normalizeAgentText(elements, editingTextElementId, textLayoutCache)
+		let changed = decoratedElements !== elements
+		const normalizedElements = decoratedElements.map((element) => {
 			const editing = element.id === editingTextElementId
 			const cached = cache.get(element)
 			let normalized: ExcalidrawElement
 			if (cached && cached.version === element.version && cached.editing === editing && cached.normalized.version === cached.normalizedVersion) {
 				normalized = cached.normalized
 			} else {
-				normalized = normalizeSceneDefaults([element], editingTextElementId).elements[0]
+				normalized = element.type === 'text' ? element : normalizeSceneDefaults([element], editingTextElementId).elements[0]
 				cache.set(element, { version: element.version, editing, normalized, normalizedVersion: normalized.version })
 			}
 			if (normalized !== element) changed = true

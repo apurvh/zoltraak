@@ -71,6 +71,7 @@ type OptionButtonProps = {
 	icon: React.ReactNode
 	isHighlighted: boolean
 	label: string
+	keyboardShortcut?: string
 	meta?: React.ReactNode
 	onClick: () => void
 	onMouseMove: () => void
@@ -81,6 +82,7 @@ function OptionButton({
 	icon,
 	isHighlighted,
 	label,
+	keyboardShortcut,
 	meta,
 	onClick,
 	onMouseMove,
@@ -89,6 +91,7 @@ function OptionButton({
 	return (
 		<button
 			aria-selected={isHighlighted}
+			aria-keyshortcuts={keyboardShortcut?.toUpperCase()}
 			className="page-switcher__option"
 			onClick={onClick}
 			onMouseMove={onMouseMove}
@@ -274,6 +277,10 @@ export function PageSwitcher({
 									}
 									isHighlighted={isHighlighted}
 									label={option.image.label}
+									keyboardShortcut={option.image.shortcut}
+									meta={option.image.shortcut ? (
+										<span className="page-switcher__option-meta"><kbd aria-hidden="true">{option.image.shortcut.toUpperCase()}</kbd></span>
+									) : undefined}
 									onClick={() => insertDefaultImage(option.image)}
 									onMouseMove={() => handleMouseMove(index)}
 								/>

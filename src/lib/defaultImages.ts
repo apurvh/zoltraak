@@ -22,6 +22,7 @@ export type DefaultImage = {
 	fileVersion?: number
 	id: string
 	label: string
+	shortcut?: string
 	mimeType: 'image/svg+xml'
 	searchTerms: readonly string[]
 	width: number
@@ -38,6 +39,7 @@ export const defaultImages: readonly DefaultImage[] = [
 		height: 160,
 		id: 'stick-user',
 		label: 'Stick User',
+		shortcut: 's',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['stick', 'user', 'person', 'actor'],
 		width: 160,
@@ -58,6 +60,7 @@ export const defaultImages: readonly DefaultImage[] = [
 		height: 160,
 		id: 'database',
 		label: 'Database',
+		shortcut: 'd',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['database', 'db', 'storage', 'data'],
 		width: 160,
@@ -69,6 +72,7 @@ export const defaultImages: readonly DefaultImage[] = [
 		id: 'cache',
 		fileVersion: 2,
 		label: 'Cache',
+		shortcut: 'c',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['cache', 'memory', 'redis', 'memcached'],
 		width: 160,
@@ -79,6 +83,7 @@ export const defaultImages: readonly DefaultImage[] = [
 		height: 96,
 		id: 'queue',
 		label: 'Queue',
+		shortcut: 'q',
 		mimeType: 'image/svg+xml',
 		searchTerms: ['queue', 'message', 'messages', 'buffer', 'stream'],
 		width: 200,

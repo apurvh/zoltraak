@@ -528,3 +528,12 @@ body {
 .mermaid-editor--dark .mermaid-editor__preview-svg svg {
 	filter: invert(93%) hue-rotate(180deg);
 }
+
+.page-switcher__option-meta kbd {
+	min-width: 22px;
+	padding: 2px 5px;
+	border: 1px solid currentColor;
+	border-radius: 4px;
+	font: inherit;
+	text-align: center;
+}

@@ -10,12 +10,9 @@ type UseCanvasShortcutsOptions = {
 	onOpenPageSwitcher: () => void
 }
 
-const imageShortcuts: Readonly<Record<string, string>> = {
-	s: 'stick-user',
-	d: 'database',
-	q: 'queue',
-	c: 'cache',
-}
+const imageShortcuts = Object.fromEntries(defaultImages
+	.filter((image) => image.shortcut)
+	.map((image) => [image.shortcut!, image.id]))
 
 function isTextInputTarget(target: EventTarget | null) {
 	if (!(target instanceof HTMLElement)) return false
