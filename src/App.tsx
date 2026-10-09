@@ -4,7 +4,6 @@ import type { AppState, BinaryFiles, ExcalidrawImperativeAPI, PointerDownState }
 import type { ExcalidrawElement, ExcalidrawImageElement } from '@excalidraw/excalidraw/element/types'
 import type { MermaidSubmitResult } from './components/MermaidEditor'
 import { PageSwitcher } from './components/PageSwitcher'
-import { HorizontalConnectors } from './components/HorizontalConnectors'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
 import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
 import { useZoltraakDocument } from './hooks/useZoltraakDocument'
@@ -456,7 +455,6 @@ export function App() {
 				onPointerUpdate={handlePointerUpdate}
 				onPointerUp={handlePointerUp}
 			/>
-			<HorizontalConnectors api={api} hidden={isPageSwitcherOpen || isMermaidEditorOpen} />
 			<PageSwitcher
 				currentPageId={document.currentPageId}
 				isOpen={isPageSwitcherOpen}
