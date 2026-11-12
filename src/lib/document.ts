@@ -1,6 +1,6 @@
 import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { openDB, type DBSchema, type IDBPDatabase, type IDBPTransaction } from 'idb'
 
 const DB_NAME = 'zoltraak'
 const DB_VERSION = 2
@@ -171,6 +171,7 @@ export function withPageScene(
 }
 
 function normalizeDocument(document: ZoltraakDocument): ZoltraakDocument {
+	if (!document.pages.length) throw new Error('The saved board has no pages.')
 	const updatedAt = document.updatedAt ?? 0
 
 	return {
@@ -185,10 +186,18 @@ function normalizeDocument(document: ZoltraakDocument): ZoltraakDocument {
 
 let database: Promise<IDBPDatabase<ZoltraakDb>> | undefined
 
+let upgradeBlocked = false
+const blockedListeners = new Set<() => void>()
+
 function getDb() {
 	if (database) return database
 	database = openDB<ZoltraakDb>(DB_NAME, DB_VERSION, {
+		blocked() {
+			upgradeBlocked = true
+			for (const notify of blockedListeners) notify()
+		},
 		upgrade(db) {
+			upgradeBlocked = false
 			if (!db.objectStoreNames.contains(DOCUMENT_STORE)) {
 				db.createObjectStore(DOCUMENT_STORE)
 			}
@@ -203,16 +212,31 @@ function getDb() {
 		},
 		terminated() { database = undefined },
 	}).catch((error) => {
+		upgradeBlocked = false
 		database = undefined
 		throw error
 	})
 	return database
 }
 
-export async function loadDocument() {
-	const db = await getDb()
+export async function loadDocument(onBlocked?: () => void) {
+	if (onBlocked) {
+		blockedListeners.add(onBlocked)
+		if (upgradeBlocked) onBlocked()
+	}
+	let db: IDBPDatabase<ZoltraakDb>
+	try {
+		db = await getDb()
+	} finally {
+		if (onBlocked) blockedListeners.delete(onBlocked)
+	}
 	// Keep metadata, pages and images in one snapshot if another tab saves during loading.
 	const transaction = db.transaction(['documents', 'pages', 'files'])
+	const [document] = await Promise.all([readSavedBoard(transaction), transaction.done])
+	return document
+}
+
+async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documents', 'pages', 'files'], 'readonly'>) {
 	const stored = await transaction.objectStore(DOCUMENT_STORE).get(DOCUMENT_KEY)
 	if (!stored) return createDefaultDocument()
 	if ('pages' in stored) {
@@ -223,7 +247,11 @@ export async function loadDocument() {
 		return document
 	}
 	const [pages, files] = await Promise.all([
-		Promise.all(stored.pageIds.map((id) => transaction.objectStore('pages').get(id))),
+		Promise.all(stored.pageIds.map(async (id) => {
+			const page = await transaction.objectStore('pages').get(id)
+			if (!page) throw new Error('A saved page could not be found.')
+			return page
+		})),
 		transaction.objectStore('files').getAll(),
 	])
 	const filesByPage = new Map<string, BinaryFiles>()
@@ -235,8 +263,7 @@ export async function loadDocument() {
 	const { pageIds: _pageIds, ...metadata } = stored
 	return normalizeDocument({
 		...metadata,
-		pages: pages.filter((page): page is NonNullable<typeof page> => !!page)
-			.map((page) => ({ ...page, files: filesByPage.get(page.id) ?? {} })),
+		pages: pages.map((page) => ({ ...page, files: filesByPage.get(page.id) ?? {} })),
 	})
 }
 
