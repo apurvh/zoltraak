@@ -153,6 +153,32 @@ export function serializeAppState(appState: AppState): StoredAppState {
 	}
 }
 
+function referencedFileIds(elements: readonly ExcalidrawElement[]) {
+	const ids = new Set<string>()
+	for (const element of elements) {
+		if (element.type === 'image' && element.fileId) ids.add(element.fileId)
+	}
+	return ids
+}
+
+export function getPageFiles(elements: readonly ExcalidrawElement[], editorFiles: BinaryFiles, page: ZoltraakPage): BinaryFiles {
+	const files: BinaryFiles = {}
+	for (const element of elements) {
+		if (element.type !== 'image' || element.isDeleted || !element.fileId) continue
+		const file = editorFiles[element.fileId] ?? page.files[element.fileId]
+		if (file) files[element.fileId] = file
+	}
+	// Legacy pages can have attachments without an image element. Keep those on their original page.
+	const missingIds = Object.keys(page.files).filter((id) => !files[id])
+	if (missingIds.length) {
+		const previousIds = referencedFileIds(page.elements)
+		for (const id of missingIds) {
+			if (!previousIds.has(id)) files[id] = page.files[id]
+		}
+	}
+	return files
+}
+
 export function withPageScene(
 	document: ZoltraakDocument,
 	pageId: string,
@@ -218,6 +244,7 @@ export async function loadDocument() {
 	if ('pages' in stored) {
 		// Move the old single-record format atomically, keeping existing drawings and images.
 		const document = normalizeDocument(stored)
+		for (const { page, id } of findCopiedFiles(document.pages)) delete page.files[id]
 		await transaction.done
 		await saveDocument(document)
 		return document
@@ -233,11 +260,15 @@ export async function loadDocument() {
 		filesByPage.set(pageId, pageFiles)
 	}
 	const { pageIds: _pageIds, ...metadata } = stored
-	return normalizeDocument({
+	const document = normalizeDocument({
 		...metadata,
 		pages: pages.filter((page): page is NonNullable<typeof page> => !!page)
 			.map((page) => ({ ...page, files: filesByPage.get(page.id) ?? {} })),
 	})
+	await removeCopiedFiles(transaction.db, document.pages).catch((error) => {
+		console.warn('Could not remove duplicate image files', error)
+	})
+	return document
 }
 
 export async function saveDocument(document: ZoltraakDocument, previous?: ZoltraakDocument) {
@@ -278,4 +309,55 @@ export async function saveDocument(document: ZoltraakDocument, previous?: Zoltra
 		await transaction.done.catch(() => {})
 		throw error
 	}
+}
+
+function findCopiedFiles(pages: ZoltraakPage[]) {
+	const owners = new Map<string, ZoltraakPage>()
+	const pagesWithFiles = pages.filter((page) => Object.keys(page.files).length)
+	if (pagesWithFiles.length < 2) return []
+	const references = pagesWithFiles.map((page) => ({ page, ids: referencedFileIds(page.elements) }))
+	for (const { page, ids } of references) {
+		for (const id of ids) {
+			if (page.files[id]) owners.set(id, page)
+		}
+	}
+	const copies: { page: ZoltraakPage; id: string; ownerId: string }[] = []
+	for (const { page, ids } of references) {
+		for (const [id, file] of Object.entries(page.files)) {
+			const owner = owners.get(id)
+			if (!ids.has(id) && owner && owner.files[id].dataURL === file.dataURL) {
+				copies.push({ page, id, ownerId: owner.id })
+			}
+		}
+	}
+	return copies
+}
+
+async function removeCopiedFiles(db: IDBPDatabase<ZoltraakDb>, pages: ZoltraakPage[]) {
+	const copies = findCopiedFiles(pages)
+	if (!copies.length) return
+
+	// A second tab may have edited a page after the readonly load. Check the current
+	// shape references and both file bodies in the same transaction as the deletion.
+	const tx = db.transaction(['pages', 'files'], 'readwrite')
+	const fileStore = tx.objectStore('files')
+	const removed = []
+	try {
+		for (const candidate of copies) {
+			const { page, id, ownerId } = candidate
+			const [storedPage, storedOwner, copy, owner] = await Promise.all([
+				tx.objectStore('pages').get(page.id),
+				tx.objectStore('pages').get(ownerId),
+				fileStore.get([page.id, id]),
+				fileStore.get([ownerId, id]),
+			])
+			if (!storedPage || !storedOwner || !copy || !owner || copy.file.dataURL !== owner.file.dataURL ||
+				referencedFileIds(storedPage.elements).has(id) || !referencedFileIds(storedOwner.elements).has(id)) continue
+			await fileStore.delete([page.id, id])
+			removed.push(candidate)
+		}
+	} finally {
+		await tx.done
+	}
+	for (const { page, id } of removed) delete page.files[id]
 }
