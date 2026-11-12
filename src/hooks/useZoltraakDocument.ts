@@ -117,7 +117,7 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 			const versions = sceneVersionsRef.current
 			const sceneChanged = versions.size !== elements.length || elements.some((element) => versions.get(element.id) !== element.version)
 			const stateChanged = Object.keys(appState).some((key) => appState[key as keyof StoredAppState] !== page.appState[key as keyof StoredAppState])
-			const files = getPageFiles(elements, editorFiles, page)
+			const files = getPageFiles(elements, editorFiles, page, currentDocument.pages)
 			const fileIds = Object.keys(files)
 			const filesChanged = fileIds.length !== Object.keys(page.files).length || fileIds.some((id) => files[id] !== page.files[id])
 			if (!sceneChanged && !stateChanged && !filesChanged) return
