@@ -80,3 +80,43 @@ test('production startup fits the script and time budgets', async ({ browser }, 
 		expect(metrics.medianReadyMs).toBeLessThan(2000)
 	}
 })
+
+test.describe('Mermaid download failure', () => {
+	test.use({ serviceWorkers: 'block' })
+
+	test('keeps the drawing and undo history, then retries without reloading', async ({ page }) => {
+		let requests = 0
+		await page.route(/\/assets\/MermaidEditor-[^/]+\.js(?:\?.*)?$/, (route) => {
+			requests++
+			return requests <= 2 ? route.abort() : route.continue()
+		})
+
+		await page.goto('/')
+		const canvas = page.locator('canvas.interactive')
+		await expect(canvas).toBeVisible()
+		const originalCanvas = await canvas.elementHandle()
+		await page.keyboard.press('r')
+		await page.mouse.move(220, 180)
+		await page.mouse.down()
+		await page.mouse.move(420, 320)
+		await page.mouse.up()
+
+		const openEditor = async () => {
+			await page.keyboard.press('Meta+K')
+			await page.getByRole('option', { name: 'Insert Mermaid diagram' }).click()
+		}
+		await openEditor()
+		await expect(page.getByText('Could not load the diagram editor.')).toBeVisible()
+		await page.getByRole('dialog', { name: 'Diagram editor' }).getByRole('button', { name: 'Close' }).click()
+		await expect(canvas).toBeVisible()
+		await page.getByRole('button', { name: 'Undo', exact: true }).click()
+		await page.getByRole('button', { name: 'Redo', exact: true }).click()
+
+		await openEditor()
+		await page.getByRole('button', { name: 'Retry' }).click()
+		await page.getByRole('button', { name: /^Insert/ }).click()
+		await expect(page.getByRole('dialog', { name: 'Mermaid editor' })).toBeHidden()
+		expect(requests).toBe(3)
+		expect(await canvas.evaluate((node, original) => node === original, originalCanvas)).toBe(true)
+	})
+})
