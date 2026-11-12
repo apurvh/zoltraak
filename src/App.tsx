@@ -468,6 +468,17 @@ export function App() {
 				onPointerUpdate={handlePointerUpdate}
 				onPointerUp={handlePointerUp}
 			/>
+			{board.saveFailure && (
+				<aside className="save-warning">
+					<span role="alert">
+						Changes could not be saved. Keep this tab open.
+						{board.saveFailure === 'retrying' && ' Retrying…'}
+					</span>
+					{board.saveFailure === 'stopped' && (
+						<button type="button" onClick={board.retrySave}>Retry save</button>
+					)}
+				</aside>
+			)}
 			<PageSwitcher
 				currentPageId={document.currentPageId}
 				isOpen={isPageSwitcherOpen}
