@@ -19,6 +19,33 @@ body {
 	min-height: 100vh;
 }
 
+.board-opening {
+	display: grid;
+	place-items: center;
+	padding: 1rem;
+	text-align: center;
+}
+
+.board-opening button {
+	padding: 0.5rem 1rem;
+	font: inherit;
+	cursor: pointer;
+}
+
+.temporary-board-notice {
+	position: absolute;
+	top: 4rem;
+	left: 50%;
+	z-index: 2;
+	transform: translateX(-50%);
+	width: max-content;
+	max-width: 90%;
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+	background: #fff3cf;
+	color: #402d06;
+}
+
 .app-shell {
 	position: fixed;
 	inset: 0;

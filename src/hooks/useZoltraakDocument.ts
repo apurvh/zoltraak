@@ -22,6 +22,9 @@ function createTabId() {
 
 export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocument) => void) {
 	const [document, setDocument] = React.useState<ZoltraakDocument | null>(null)
+	const [loadState, setLoadState] = React.useState<'loading' | 'blocked' | 'failed' | 'temporary' | 'ready'>('loading')
+	const [loadAttempt, retryLoad] = React.useReducer((attempt: number) => attempt + 1, 0)
+	const temporarySessionRef = React.useRef(false)
 	const documentRef = React.useRef<ZoltraakDocument | null>(null)
 	const broadcastChannelRef = React.useRef<BroadcastChannel | null>(null)
 	const tabIdRef = React.useRef(createTabId())
@@ -33,6 +36,7 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 	if (!saveQueueRef.current) {
 		saveQueueRef.current = new SaveQueue(async (nextDocument) => {
 			setDocument(documentRef.current)
+			if (temporarySessionRef.current) return
 			broadcastChannelRef.current?.postMessage(createDocumentPatch(nextDocument, broadcastDocumentRef.current, tabIdRef.current))
 			broadcastDocumentRef.current = nextDocument
 			await saveDocument(nextDocument, savedDocumentRef.current)
@@ -116,20 +120,31 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 	React.useEffect(() => {
 		let isMounted = true
 
-		loadDocument()
-			.catch(() => createDefaultDocument())
-			.then((loadedDocument) => {
+		async function openBoard() {
+			setLoadState('loading')
+			try {
+				// Browsers without IndexedDB can still draw in this tab.
+				const temporary = !globalThis.indexedDB
+				const loaded = temporary ? createDefaultDocument() : await loadDocument(() => {
+					if (isMounted) setLoadState('blocked')
+				})
 				if (!isMounted) return
-				documentRef.current = loadedDocument
-				savedDocumentRef.current = loadedDocument
-				broadcastDocumentRef.current = loadedDocument
-				setDocument(loadedDocument)
-			})
+				temporarySessionRef.current = temporary
+				documentRef.current = loaded
+				savedDocumentRef.current = loaded
+				broadcastDocumentRef.current = loaded
+				setDocument(loaded)
+				setLoadState(temporary ? 'temporary' : 'ready')
+			} catch {
+				if (isMounted) setLoadState('failed')
+			}
+		}
+		void openBoard()
 
 		return () => {
 			isMounted = false
 		}
-	}, [])
+	}, [loadAttempt])
 
 	React.useEffect(() => {
 		if (!('BroadcastChannel' in globalThis)) return
@@ -138,7 +153,7 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 		broadcastChannelRef.current = channel
 
 		channel.onmessage = (event: MessageEvent<unknown>) => {
-			if (!isDocumentPatch(event.data)) return
+			if (temporarySessionRef.current || !isDocumentPatch(event.data)) return
 			if (event.data.sourceTabId === tabIdRef.current) return
 			const current = documentRef.current
 			if (!current) return
@@ -159,6 +174,8 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 	}, [])
 
 	return {
+		loadState,
+		retryLoad,
 		document,
 		documentRef,
 		persistDocument,

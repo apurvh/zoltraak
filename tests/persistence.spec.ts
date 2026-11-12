@@ -6,7 +6,7 @@ declare global {
 	}
 }
 
-test('storage load failure falls back to a blank document', async ({ page }) => {
+test('a browser without IndexedDB can draw in a temporary document', async ({ page }) => {
 	await page.addInitScript(() => {
 		Object.defineProperty(window, 'indexedDB', {
 			configurable: true,
@@ -17,10 +17,14 @@ test('storage load failure falls back to a blank document', async ({ page }) => 
 	await page.goto('/')
 	await page.waitForFunction(() => window.__zoltraakTestApi)
 
+	await expect(page.getByRole('status').filter({ hasText: 'Browser storage is unavailable' })).toBeVisible()
 	await expect
 		.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getCurrentPageId()))
 		.not.toBe('')
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getPages().length)).toBe(1)
+	await page.keyboard.press('Meta+k')
+	await page.getByRole('option', { name: 'Database', exact: true }).click()
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(2)
 })
 
 test('autosave keeps trying after a transient storage failure', async ({ page }) => {

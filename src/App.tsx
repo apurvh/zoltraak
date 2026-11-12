@@ -53,8 +53,8 @@ export function App() {
 			isApplyingExternalDocumentRef.current = false
 		}, 0)
 	}, [])
-	const { document, documentRef, persistDocument, resetDocument, updatePageScene } =
-		useZoltraakDocument(applyExternalDocument)
+	const board = useZoltraakDocument(applyExternalDocument)
+	const { document, documentRef, persistDocument, resetDocument, updatePageScene } = board
 
 	React.useEffect(() => {
 		apiRef.current = api
@@ -438,13 +438,29 @@ export function App() {
 	)
 
 	if (!document) {
-		return <main className="app-shell" />
+		return (
+			<main className="app-shell board-opening">
+				{board.loadState === 'failed' ? (
+					<div role="alert">
+						<p>Couldn’t open your saved drawings.</p>
+						<button type="button" onClick={board.retryLoad}>Try again</button>
+					</div>
+				) : (
+					<p role="status">{board.loadState === 'blocked'
+						? 'Close other Zoltraak tabs to finish opening your drawings.'
+						: 'Opening your drawings…'}</p>
+				)}
+			</main>
+		)
 	}
 
 	const currentPage = getCurrentPage(document)
 
 	return (
 		<main className="app-shell">
+			{board.loadState === 'temporary' && (
+				<p className="temporary-board-notice" role="status">Browser storage is unavailable. Drawings in this tab will be lost when it closes.</p>
+			)}
 			<Excalidraw
 				excalidrawAPI={setApi}
 				initialData={pageInitialData(currentPage)}
