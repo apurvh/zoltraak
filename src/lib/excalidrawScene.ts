@@ -1,7 +1,7 @@
 import { CaptureUpdateAction, ROUNDNESS, convertToExcalidrawElements, restoreElements, newElementWith } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawTextElement } from '@excalidraw/excalidraw/element/types'
-import { serializeAppState, type ZoltraakPage } from './document'
+import { getPageFiles, serializeAppState, type ZoltraakPage } from './document'
 
 export const SHAPE_ROUGHNESS = 0.5
 export const RECTANGLE_CORNER_RADIUS = 6.4
@@ -32,12 +32,13 @@ function pageUpdateAppState(page: ZoltraakPage, appState: AppState) {
 	} as Parameters<ExcalidrawImperativeAPI['updateScene']>[0]['appState']
 }
 
-export function sceneFromApi(api: ExcalidrawImperativeAPI) {
+export function sceneFromApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage) {
 	const appState = api.getAppState()
+	const elements = api.getSceneElements().filter((element) => element.id !== appState.pendingImageElementId)
 	return {
-		elements: api.getSceneElements().filter((element) => element.id !== appState.pendingImageElementId),
+		elements,
 		appState: serializeAppState(appState),
-		files: api.getFiles(),
+		files: getPageFiles(elements, api.getFiles(), page),
 	}
 }
 

@@ -81,7 +81,7 @@ export function App() {
 		const currentApi = apiRef.current
 		if (!currentApi) return sourceDocument
 
-		const scene = sceneFromApi(currentApi)
+		const scene = sceneFromApi(currentApi, getCurrentPage(sourceDocument))
 
 		return withPageScene(
 			sourceDocument,
