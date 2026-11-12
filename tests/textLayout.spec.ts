@@ -114,3 +114,49 @@ test('existing clipped text is repaired without changing identities or bindings'
 	await page.getByRole('button', { name: 'Redo', exact: true }).click()
 	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().find((s) => s.type === 'text')?.props.text)).toContain('\n')
 })
+
+for (const action of ['finish editing', 'reload a saved drawing'] as const) {
+	test(`a bound label with only the sparkle prefix can be cleared: ${action}`, async ({ page }) => {
+		const errors: string[] = []
+		page.on('pageerror', (error) => errors.push(error.message))
+		await page.goto('/')
+		await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
+		await page.keyboard.press('r')
+		await page.mouse.move(400, 220)
+		await page.mouse.down()
+		await page.mouse.move(650, 320)
+		await page.mouse.up()
+		const boxId = await page.evaluate(() => window.__zoltraakTestApi!.getShapes()[0].id)
+		const editor = page.locator('textarea.excalidraw-wysiwyg')
+		await page.mouse.dblclick(525, 270)
+		await editor.fill('agent')
+		await page.keyboard.press('Escape')
+		await page.mouse.dblclick(525, 270)
+		await expect(editor).toHaveValue('✨ agent')
+		await editor.fill('✨ ')
+
+		if (action === 'finish editing') {
+			await page.keyboard.press('Escape')
+		} else {
+			// Older versions could autosave the prefix while the label was still being edited.
+			await expect.poll(() => page.evaluate(async () => {
+				const modulePath = '/src/lib/document.ts'
+				const { getCurrentPage, loadDocument } = await import(modulePath)
+				const saved = getCurrentPage(await loadDocument())
+				return saved.elements.find((element: { type: string }) => element.type === 'text')?.originalText
+			})).toBe('✨ ')
+			await page.reload()
+		}
+
+		await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getShapes().map((shape) => ({
+			id: shape.id, bindings: shape.props.boundElements,
+		})))).toEqual([{ id: boxId, bindings: [] }])
+		await page.mouse.dblclick(525, 270)
+		await editor.fill('gateway')
+		await page.keyboard.press('Escape')
+		await expect.poll(() => page.evaluate(() =>
+			window.__zoltraakTestApi!.getShapes().find((shape) => shape.type === 'text')?.props.originalText
+		)).toBe('gateway')
+		expect(errors).toEqual([])
+	})
+}

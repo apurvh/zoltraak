@@ -70,6 +70,14 @@ function normalizeAgentText(elements: readonly ExcalidrawElement[], editingTextE
 		const cached = cache?.get(element)
 		if (cached?.version === element.version && cached.containerVersion === container?.version) continue
 		if (container && (container.type === 'rectangle' || container.type === 'ellipse' || container.type === 'diamond' || container.type === 'arrow')) {
+			if (!text) {
+				// Match clearing a bound label in Excalidraw. Its layout helper omits empty labels.
+				updates.set(element.id, newElementWith(element, { text: '', originalText: '', isDeleted: true }))
+				updates.set(container.id, newElementWith(container, {
+					boundElements: container.boundElements?.filter((bound) => bound.id !== element.id),
+				}))
+				continue
+			}
 			const label = { ...element, text, originalText: text }
 			const [laidOutContainer, laidOutText] = convertToExcalidrawElements([{
 				...container,
