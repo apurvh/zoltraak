@@ -145,3 +145,38 @@ test('existing version-one drawings and images migrate without losing data', asy
 	await page.reload()
 	await page.waitForFunction(() => window.__zoltraakTestApi?.getShapes().length === 1)
 })
+
+test('failed saves stay visible and retry saves the latest drawing', async ({ page }) => {
+	await page.goto('/')
+	await page.waitForFunction(() => window.__zoltraakTestApi?.getCurrentToolId())
+	await page.evaluate(() => window.__zoltraakTestApi!.resetDocument())
+	await page.evaluate(() => {
+		const originalPut = IDBObjectStore.prototype.put
+		IDBObjectStore.prototype.put = function (...args) {
+			if (sessionStorage.getItem('block-test-writes')) throw new DOMException('Storage full', 'QuotaExceededError')
+			return originalPut.apply(this, args)
+		}
+		sessionStorage.setItem('block-test-writes', 'true')
+	})
+
+	const drawRectangle = async (x: number) => {
+		await page.keyboard.press('r')
+		await page.mouse.move(x, 180)
+		await page.mouse.down()
+		await page.mouse.move(x + 90, 320)
+		await page.mouse.up()
+	}
+	await drawRectangle(220)
+	const warning = page.getByRole('alert').filter({ hasText: 'Changes could not be saved' })
+	await expect(warning).toContainText('Retrying')
+	await drawRectangle(450)
+	await expect(page.getByRole('button', { name: 'Retry save' })).toBeVisible({ timeout: 10_000 })
+	await expect(warning).toBeVisible()
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi!.getShapes().length)).toBe(2)
+
+	await page.evaluate(() => sessionStorage.removeItem('block-test-writes'))
+	await page.getByRole('button', { name: 'Retry save' }).click()
+	await expect(warning).toBeHidden()
+	await page.reload()
+	await expect.poll(() => page.evaluate(() => window.__zoltraakTestApi?.getShapes().length)).toBe(2)
+})

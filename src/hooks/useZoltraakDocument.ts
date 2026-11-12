@@ -14,6 +14,8 @@ import {
 import { SaveQueue } from '../lib/saveQueue'
 import { applyDocumentPatch, createDocumentPatch, isDocumentPatch } from '../lib/documentSync'
 
+type SaveFailure = 'retrying' | 'stopped' | null
+
 const DOCUMENT_SYNC_CHANNEL = 'zoltraak-document-sync'
 
 function createTabId() {
@@ -27,7 +29,8 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 	const tabIdRef = React.useRef(createTabId())
 	const onExternalDocumentRef = React.useRef(onExternalDocument)
 	const saveQueueRef = React.useRef<SaveQueue<ZoltraakDocument> | null>(null)
-	const saveFailuresRef = React.useRef(0)
+	const retryCountRef = React.useRef<number | null>(null)
+	const [saveFailure, setSaveFailure] = React.useState<SaveFailure>(null)
 	const savedDocumentRef = React.useRef<ZoltraakDocument | undefined>(undefined)
 	const broadcastDocumentRef = React.useRef<ZoltraakDocument | undefined>(undefined)
 	if (!saveQueueRef.current) {
@@ -37,12 +40,25 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 			broadcastDocumentRef.current = nextDocument
 			await saveDocument(nextDocument, savedDocumentRef.current)
 			savedDocumentRef.current = nextDocument
-			saveFailuresRef.current = 0
+			if (retryCountRef.current !== null) {
+				if (documentRef.current === nextDocument) {
+					retryCountRef.current = null
+					setSaveFailure(null)
+				} else if (documentRef.current) {
+					// An edit or incoming change may have arrived during this write.
+					saveQueueRef.current!.schedule(documentRef.current)
+				}
+			}
 		}, () => {
 			// A single failed batched write must not discard the final drawing.
-			if (documentRef.current && saveFailuresRef.current < 3) {
-				saveFailuresRef.current += 1
-				saveQueueRef.current!.schedule(documentRef.current, 500 * saveFailuresRef.current)
+			if (!documentRef.current) return
+			const retries = retryCountRef.current ?? 0
+			if (retries < 3) {
+				retryCountRef.current = retries + 1
+				setSaveFailure('retrying')
+				saveQueueRef.current!.schedule(documentRef.current, 500 * (retries + 1))
+			} else {
+				setSaveFailure('stopped')
 			}
 		})
 	}
@@ -57,6 +73,16 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 		documentRef.current = stampedDocument
 		setDocument(stampedDocument)
 		return saveQueueRef.current!.enqueue(stampedDocument)
+	}, [])
+
+	const retrySave = React.useCallback(() => {
+		const latest = documentRef.current
+		if (!latest) return
+		setSaveFailure('retrying')
+		retryCountRef.current = 0
+		const queue = saveQueueRef.current!
+		queue.schedule(latest)
+		void queue.flush()
 	}, [])
 
 	const resetDocument = React.useCallback(async () => {
@@ -164,5 +190,7 @@ export function useZoltraakDocument(onExternalDocument?: (document: ZoltraakDocu
 		persistDocument,
 		resetDocument,
 		updatePageScene,
+		saveFailure,
+		retrySave,
 	}
 }
