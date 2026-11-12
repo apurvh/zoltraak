@@ -9,11 +9,15 @@ let attempts = 0
 
 function loadEditor(): Promise<EditorModule> {
 	if (!pending) {
+		const attempt = attempts++
 		const url = new URL(editorUrl, document.baseURI)
-		// Browsers remember failed module requests for the lifetime of the tab.
-		if (attempts > 0) url.searchParams.set('mermaid-retry', String(attempts))
-		attempts++
-		pending = (import(/* @vite-ignore */ url.href) as Promise<EditorModule>).catch((error) => {
+		url.searchParams.set('mermaid-retry', String(attempt))
+		// Keep the first import visible to Vite's dependency scanner. Browsers need a
+		// fresh module URL after a failed request, even when the network has recovered.
+		const request: Promise<EditorModule> = attempt === 0
+			? import('./MermaidEditor')
+			: import(/* @vite-ignore */ url.href)
+		pending = request.catch((error) => {
 			pending = undefined
 			throw error
 		})
