@@ -25,6 +25,29 @@ body {
 	min-height: 100vh;
 }
 
+.other-tab-warning {
+	position: fixed;
+	z-index: 10;
+	top: 12px;
+	left: 50%;
+	width: max-content;
+	max-width: min(460px, calc(100vw - 112px));
+	transform: translateX(-50%);
+	pointer-events: none;
+}
+
+.other-tab-warning p {
+	margin: 0;
+	padding: 6px 12px;
+	border: 1px solid #e5c886;
+	border-radius: 8px;
+	background: #fff4d6;
+	color: #5e410b;
+	font-size: 13px;
+	line-height: 1.4;
+	text-align: center;
+}
+
 .app-shell .excalidraw .App-toolbar,
 .app-shell .excalidraw .HintViewer,
 .app-shell .excalidraw .sidebar-trigger {
