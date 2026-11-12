@@ -76,7 +76,9 @@ self.addEventListener('fetch', (event) => {
     const cache = await caches.open(CACHE);
     // These are fixed, same-origin build files. Preview/CDN Vary: Origin headers
     // must not make a module request miss its precached copy.
-    const cached = await cache.match(request.mode === 'navigate' ? url('index.html') : request, { ignoreVary: true });
+    const cacheUrl = new URL(request.url);
+    cacheUrl.searchParams.delete('mermaid-retry');
+    const cached = await cache.match(request.mode === 'navigate' ? url('index.html') : cacheUrl.href, { ignoreVary: true });
     return cached || fetch(request);
   })());
 });

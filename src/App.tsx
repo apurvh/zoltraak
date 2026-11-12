@@ -3,6 +3,7 @@ import { CaptureUpdateAction, convertToExcalidrawElements, Excalidraw, newElemen
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI, PointerDownState } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawImageElement } from '@excalidraw/excalidraw/element/types'
 import type { MermaidSubmitResult } from './components/MermaidEditor'
+import { MermaidEditorLoader } from './components/MermaidEditorLoader'
 import { PageSwitcher } from './components/PageSwitcher'
 import { useCanvasShortcuts } from './hooks/useCanvasShortcuts'
 import { useMermaidDoubleClick } from './hooks/useMermaidDoubleClick'
@@ -26,10 +27,6 @@ import {
 	sceneFromApi,
 } from './lib/excalidrawScene'
 import { installTestApi, uninstallTestApi } from './testing/installTestApi'
-
-const MermaidEditor = React.lazy(async () => ({
-	default: (await import('./components/MermaidEditor')).MermaidEditor,
-}))
 
 function createId() {
 	return globalThis.crypto?.randomUUID?.() ?? `id-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -467,20 +464,14 @@ export function App() {
 				theme={currentPage?.appState?.theme === 'dark' ? 'dark' : 'light'}
 			/>
 			{isMermaidEditorOpen && (
-				<React.Suspense fallback={
-					<div className="mermaid-editor-backdrop">
-						<div className="mermaid-editor" role="status">Loading diagram editor…</div>
-					</div>
-				}>
-					<MermaidEditor
-						editingElementId={mermaidEditingElementId}
-						initialSource={mermaidEditingSource}
-						isOpen={isMermaidEditorOpen}
-						theme={currentPage?.appState?.theme || 'light'}
-						onClose={closeMermaidEditor}
-						onSubmit={handleMermaidSubmit}
-					/>
-				</React.Suspense>
+				<MermaidEditorLoader
+					editingElementId={mermaidEditingElementId}
+					initialSource={mermaidEditingSource}
+					isOpen={isMermaidEditorOpen}
+					theme={currentPage?.appState?.theme || 'light'}
+					onClose={closeMermaidEditor}
+					onSubmit={handleMermaidSubmit}
+				/>
 			)}
 		</main>
 	)

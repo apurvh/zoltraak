@@ -234,6 +234,13 @@ body {
 	box-shadow: 0 24px 80px rgb(0 0 0 / 28%);
 }
 
+.mermaid-editor--loading {
+	height: auto;
+	width: min(90vw, 32rem);
+	padding: 16px;
+	gap: 16px;
+}
+
 .mermaid-editor__header {
 	display: flex;
 	align-items: center;
