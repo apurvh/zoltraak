@@ -55,11 +55,13 @@ export type PageSummary = {
 }
 
 type StoredDocument = Omit<ZoltraakDocument, 'pages'> & { pageIds: string[] }
+type LegacyPage = Omit<ZoltraakPage, 'updatedAt'> & { updatedAt?: number }
+type LegacyDocument = Omit<ZoltraakDocument, 'pages' | 'updatedAt'> & { pages: LegacyPage[]; updatedAt?: number }
 
 interface ZoltraakDb extends DBSchema {
 	[DOCUMENT_STORE]: {
 		key: string
-		value: StoredDocument | ZoltraakDocument
+		value: StoredDocument | LegacyDocument
 	}
 	pages: {
 		key: string
@@ -245,7 +247,7 @@ function getDb() {
 	return database
 }
 
-export async function loadDocument(onBlocked?: () => void) {
+export async function loadDocument(onBlocked?: () => void): Promise<ZoltraakDocument> {
 	if (onBlocked) {
 		blockedListeners.add(onBlocked)
 		if (upgradeBlocked) onBlocked()
@@ -266,12 +268,10 @@ async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documen
 	const stored = await transaction.objectStore(DOCUMENT_STORE).get(DOCUMENT_KEY)
 	if (!stored) return createDefaultDocument()
 	if ('pages' in stored) {
-		// Move the old single-record format atomically, keeping existing drawings and images.
-		const document = normalizeDocument(stored)
-		for (const { page, id } of findCopiedFiles(document.pages)) delete page.files[id]
 		await transaction.done
-		await saveDocument(document)
-		return document
+		const migrated = await migrateLegacyBoard(transaction.db)
+		// Another tab may have finished the migration while we waited for the writer.
+		return migrated ?? loadDocument()
 	}
 	const [pages, files] = await Promise.all([
 		Promise.all(stored.pageIds.map(async (id) => {
@@ -281,12 +281,7 @@ async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documen
 		})),
 		transaction.objectStore('files').getAll(),
 	])
-	const filesByPage = new Map<string, BinaryFiles>()
-	for (const { pageId, file } of files) {
-		const pageFiles = filesByPage.get(pageId) ?? {}
-		pageFiles[file.id] = file
-		filesByPage.set(pageId, pageFiles)
-	}
+	const filesByPage = groupFilesByPage(files)
 	const { pageIds: _pageIds, ...metadata } = stored
 	const document = normalizeDocument({
 		...metadata,
@@ -298,6 +293,72 @@ async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documen
 	return document
 }
 
+function groupFilesByPage(rows: ZoltraakDb['files']['value'][]) {
+	const filesByPage = new Map<string, BinaryFiles>()
+	for (const { pageId, file } of rows) {
+		const files = filesByPage.get(pageId) ?? {}
+		files[file.id] = file
+		filesByPage.set(pageId, files)
+	}
+	return filesByPage
+}
+
+async function migrateLegacyBoard(db: IDBPDatabase<ZoltraakDb>) {
+	const tx = db.transaction(['documents', 'pages', 'files'], 'readwrite')
+	try {
+		const documents = tx.objectStore('documents')
+		const pages = tx.objectStore('pages')
+		const files = tx.objectStore('files')
+		const legacy = await documents.get(DOCUMENT_KEY)
+		if (!legacy || !('pages' in legacy)) {
+			await tx.done
+			return
+		}
+
+		// Older builds could write page edits without replacing timestamp-free metadata.
+		const [splitPages, fileRows] = await Promise.all([pages.getAll(), files.getAll()])
+		const splitFiles = groupFilesByPage(fileRows)
+		const recovered = new Map<string, ZoltraakPage>()
+		for (const page of legacy.pages) {
+			recovered.set(page.id, {
+				...page,
+				updatedAt: page.updatedAt ?? legacy.updatedAt ?? 0,
+				files: { ...splitFiles.get(page.id), ...page.files },
+			})
+		}
+		// Map keeps the original order. Split-only pages append in IndexedDB key order.
+		for (const split of splitPages) {
+			const embedded = recovered.get(split.id)
+			const updatedAt = split.updatedAt ?? 0
+			if (embedded && embedded.updatedAt > updatedAt) continue
+			recovered.set(split.id, { ...split, updatedAt, files: { ...embedded?.files, ...splitFiles.get(split.id) } })
+		}
+		const document = normalizeDocument({ ...legacy, updatedAt: legacy.updatedAt ?? 0, pages: [...recovered.values()] })
+		if (!recovered.has(document.currentPageId)) document.currentPageId = document.pages[0].id
+		for (const page of document.pages) document.updatedAt = Math.max(document.updatedAt, page.updatedAt)
+
+		for (const { page, id } of findCopiedFiles(document.pages)) {
+			delete page.files[id]
+			if (splitFiles.get(page.id)?.[id]) await files.delete([page.id, id])
+		}
+		for (const page of document.pages) {
+			const { files: pageFiles, ...pageData } = page
+			await pages.put(pageData, page.id)
+			for (const [id, file] of Object.entries(pageFiles)) {
+				if (file !== splitFiles.get(page.id)?.[id]) await files.put({ pageId: page.id, file }, [page.id, id])
+			}
+		}
+		const { pages: migratedPages, ...metadata } = document
+		await documents.put({ ...metadata, pageIds: migratedPages.map((page) => page.id) }, DOCUMENT_KEY)
+		await tx.done
+		return document
+	} catch (error) {
+		try { tx.abort() } catch { /* It may already have aborted. */ }
+		await tx.done.catch(() => {})
+		throw error
+	}
+}
+
 export async function saveDocument(document: ZoltraakDocument, previous?: ZoltraakDocument) {
 	const db = await getDb()
 	const transaction = db.transaction(['documents', 'pages', 'files'], 'readwrite')
@@ -307,7 +368,7 @@ export async function saveDocument(document: ZoltraakDocument, previous?: Zoltra
 		const pages = transaction.objectStore('pages')
 		const files = transaction.objectStore('files')
 		const stored = await documents.get(DOCUMENT_KEY)
-		if (!stored || document.updatedAt >= stored.updatedAt) {
+		if (!stored || document.updatedAt >= (stored.updatedAt ?? 0)) {
 			const { pages: _pages, ...metadata } = document
 			await documents.put({ ...metadata, pageIds: document.pages.map((page) => page.id) }, DOCUMENT_KEY)
 			for (const oldPage of previous?.pages ?? []) {
