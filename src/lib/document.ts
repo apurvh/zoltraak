@@ -155,25 +155,48 @@ export function serializeAppState(appState: AppState): StoredAppState {
 	}
 }
 
-function referencedFileIds(elements: readonly ExcalidrawElement[]) {
+function referencedFileIds(elements: readonly ExcalidrawElement[], includeDeleted: boolean) {
 	const ids = new Set<string>()
 	for (const element of elements) {
-		if (element.type === 'image' && element.fileId) ids.add(element.fileId)
+		if (element.type === 'image' && element.fileId && (includeDeleted || !element.isDeleted)) ids.add(element.fileId)
 	}
 	return ids
 }
 
-export function getPageFiles(elements: readonly ExcalidrawElement[], editorFiles: BinaryFiles, page: ZoltraakPage): BinaryFiles {
+function unambiguousFile(pages: ZoltraakPage[], id: string, source?: BinaryFiles[string]) {
+	for (const page of pages) {
+		const file = page.files[id]
+		if (!file) continue
+		if (source && (file.dataURL !== source.dataURL || file.mimeType !== source.mimeType)) return undefined
+		source ??= file
+	}
+	return source
+}
+
+export function getPageFiles(
+	elements: readonly ExcalidrawElement[],
+	editorFiles: BinaryFiles,
+	page: ZoltraakPage,
+	pages: ZoltraakPage[]
+): BinaryFiles {
 	const files: BinaryFiles = {}
+	let previousImages: Set<string> | undefined
 	for (const element of elements) {
 		if (element.type !== 'image' || element.isDeleted || !element.fileId) continue
-		const file = editorFiles[element.fileId] ?? page.files[element.fileId]
+		let file: BinaryFiles[string] | undefined = page.files[element.fileId]
+		const incoming = editorFiles[element.fileId]
+		if (!file && incoming) {
+			previousImages ??= referencedFileIds(page.elements, false)
+			// The editor shares a file cache across pages. An existing broken image may
+			// share its ID with unrelated bytes from a page that was opened earlier.
+			file = previousImages.has(element.fileId) ? unambiguousFile(pages, element.fileId, incoming) : incoming
+		}
 		if (file) files[element.fileId] = file
 	}
 	// Legacy pages can have attachments without an image element. Keep those on their original page.
 	const missingIds = Object.keys(page.files).filter((id) => !files[id])
 	if (missingIds.length) {
-		const previousIds = referencedFileIds(page.elements)
+		const previousIds = referencedFileIds(page.elements, true)
 		for (const id of missingIds) {
 			if (!previousIds.has(id)) files[id] = page.files[id]
 		}
@@ -273,6 +296,16 @@ async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documen
 		// Another tab may have finished the migration while we waited for the writer.
 		return migrated ?? loadDocument()
 	}
+	const document = await readSplitBoard(transaction, stored)
+	if (!findImageRepairs(document.pages).length) return document
+	await transaction.done
+	return repairStoredImages(transaction.db)
+}
+
+async function readSplitBoard(
+	transaction: IDBPTransaction<ZoltraakDb, ['documents', 'pages', 'files'], 'readonly' | 'readwrite'>,
+	stored: StoredDocument
+) {
 	const [pages, files] = await Promise.all([
 		Promise.all(stored.pageIds.map(async (id) => {
 			const page = await transaction.objectStore('pages').get(id)
@@ -283,14 +316,10 @@ async function readSavedBoard(transaction: IDBPTransaction<ZoltraakDb, ['documen
 	])
 	const filesByPage = groupFilesByPage(files)
 	const { pageIds: _pageIds, ...metadata } = stored
-	const document = normalizeDocument({
+	return normalizeDocument({
 		...metadata,
 		pages: pages.map((page) => ({ ...page, files: filesByPage.get(page.id) ?? {} })),
 	})
-	await removeCopiedFiles(transaction.db, document.pages).catch((error) => {
-		console.warn('Could not remove duplicate image files', error)
-	})
-	return document
 }
 
 function groupFilesByPage(rows: ZoltraakDb['files']['value'][]) {
@@ -337,9 +366,8 @@ async function migrateLegacyBoard(db: IDBPDatabase<ZoltraakDb>) {
 		if (!recovered.has(document.currentPageId)) document.currentPageId = document.pages[0].id
 		for (const page of document.pages) document.updatedAt = Math.max(document.updatedAt, page.updatedAt)
 
-		for (const { page, id } of findCopiedFiles(document.pages)) {
-			delete page.files[id]
-			if (splitFiles.get(page.id)?.[id]) await files.delete([page.id, id])
+		for (const { page, file } of findImageRepairs(document.pages)) {
+			page.files[file.id] = file
 		}
 		for (const page of document.pages) {
 			const { files: pageFiles, ...pageData } = page
@@ -399,53 +427,52 @@ export async function saveDocument(document: ZoltraakDocument, previous?: Zoltra
 	}
 }
 
-function findCopiedFiles(pages: ZoltraakPage[]) {
-	const owners = new Map<string, ZoltraakPage>()
-	const pagesWithFiles = pages.filter((page) => Object.keys(page.files).length)
-	if (pagesWithFiles.length < 2) return []
-	const references = pagesWithFiles.map((page) => ({ page, ids: referencedFileIds(page.elements) }))
-	for (const { page, ids } of references) {
-		for (const id of ids) {
-			if (page.files[id]) owners.set(id, page)
+function findImageRepairs(pages: ZoltraakPage[]) {
+	const repairs: { page: ZoltraakPage; file: BinaryFiles[string] }[] = []
+	if (pages.length < 2) return repairs
+	const missing = new Map<string, ZoltraakPage[]>()
+	for (const page of pages) {
+		for (const id of referencedFileIds(page.elements, false)) {
+			if (page.files[id]) continue
+			const targets = missing.get(id)
+			if (targets) targets.push(page)
+			else missing.set(id, [page])
 		}
 	}
-	const copies: { page: ZoltraakPage; id: string; ownerId: string }[] = []
-	for (const { page, ids } of references) {
-		for (const [id, file] of Object.entries(page.files)) {
-			const owner = owners.get(id)
-			if (!ids.has(id) && owner && owner.files[id].dataURL === file.dataURL) {
-				copies.push({ page, id, ownerId: owner.id })
-			}
+	for (const [id, targets] of missing) {
+		const source = unambiguousFile(pages, id)
+		if (source) {
+			for (const page of targets) repairs.push({ page, file: source })
 		}
 	}
-	return copies
+	return repairs
 }
 
-async function removeCopiedFiles(db: IDBPDatabase<ZoltraakDb>, pages: ZoltraakPage[]) {
-	const copies = findCopiedFiles(pages)
-	if (!copies.length) return
-
-	// A second tab may have edited a page after the readonly load. Check the current
-	// shape references and both file bodies in the same transaction as the deletion.
-	const tx = db.transaction(['pages', 'files'], 'readwrite')
-	const fileStore = tx.objectStore('files')
-	const removed = []
+async function repairStoredImages(db: IDBPDatabase<ZoltraakDb>): Promise<ZoltraakDocument> {
+	const tx = db.transaction(['documents', 'pages', 'files'], 'readwrite')
+	let readableBoard: ZoltraakDocument | undefined
 	try {
-		for (const candidate of copies) {
-			const { page, id, ownerId } = candidate
-			const [storedPage, storedOwner, copy, owner] = await Promise.all([
-				tx.objectStore('pages').get(page.id),
-				tx.objectStore('pages').get(ownerId),
-				fileStore.get([page.id, id]),
-				fileStore.get([ownerId, id]),
-			])
-			if (!storedPage || !storedOwner || !copy || !owner || copy.file.dataURL !== owner.file.dataURL ||
-				referencedFileIds(storedPage.elements).has(id) || !referencedFileIds(storedOwner.elements).has(id)) continue
-			await fileStore.delete([page.id, id])
-			removed.push(candidate)
+		const stored = await tx.objectStore('documents').get(DOCUMENT_KEY)
+		if (!stored || 'pages' in stored) {
+			await tx.done
+			return loadDocument()
 		}
-	} finally {
+		// Another tab may have changed the references or the available bytes since the first read.
+		const document = await readSplitBoard(tx, stored)
+		const repairs = findImageRepairs(document.pages)
+		if (repairs.length) readableBoard = document
+		for (const { page, file } of repairs) {
+			await tx.objectStore('files').add({ pageId: page.id, file }, [page.id, file.id])
+		}
 		await tx.done
+		for (const { page, file } of repairs) page.files[file.id] = file
+		return document
+	} catch (error) {
+		try { tx.abort() } catch { /* It may already have aborted. */ }
+		await tx.done.catch(() => {})
+		if (!readableBoard) throw error
+		// A failed repair must still allow the latest readable board to open.
+		console.warn('Could not restore missing image files', error)
+		return readableBoard
 	}
-	for (const { page, id } of removed) delete page.files[id]
 }

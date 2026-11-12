@@ -23,6 +23,7 @@ import {
 import {
 	loadPageIntoApi as loadExcalidrawPage,
 	createSceneNormalizer,
+	hasConflictingImageCache,
 	pageInitialData,
 	sceneFromApi,
 } from './lib/excalidrawScene'
@@ -33,6 +34,7 @@ function createId() {
 }
 
 export function App() {
+	const [canvasVersion, remountCanvas] = React.useReducer((version: number) => version + 1, 0)
 	const [api, setApi] = React.useState<ExcalidrawImperativeAPI | null>(null)
 	const [isPageSwitcherOpen, setIsPageSwitcherOpen] = React.useState(false)
 	const [isMermaidEditorOpen, setIsMermaidEditorOpen] = React.useState(false)
@@ -42,17 +44,31 @@ export function App() {
 	const normalizeScene = React.useMemo(createSceneNormalizer, [])
 	const lastPointerScenePositionRef = React.useRef<{ x: number; y: number } | null>(null)
 	const isApplyingExternalDocumentRef = React.useRef(false)
+	const loadPageIntoCurrentApi = React.useCallback((page: ZoltraakPage) => {
+		const currentApi = apiRef.current
+		if (!currentApi) return
+
+		if (hasConflictingImageCache(page, currentApi.getFiles())) {
+			// Excalidraw keeps the first image it saw for each ID. Start a clean
+			// renderer only when that cache would show the wrong page's image.
+			apiRef.current = null
+			remountCanvas()
+			return
+		}
+		loadExcalidrawPage(currentApi, page)
+	}, [])
+
 	const applyExternalDocument = React.useCallback((nextDocument: ZoltraakDocument) => {
 		const currentApi = apiRef.current
 		const page = getCurrentPage(nextDocument)
 		if (!currentApi || !page) return
 
 		isApplyingExternalDocumentRef.current = true
-		loadExcalidrawPage(currentApi, page)
+		loadPageIntoCurrentApi(page)
 		window.setTimeout(() => {
 			isApplyingExternalDocumentRef.current = false
 		}, 0)
-	}, [])
+	}, [loadPageIntoCurrentApi])
 	const board = useZoltraakDocument(applyExternalDocument)
 	const { document, documentRef, persistDocument, resetDocument, updatePageScene } = board
 
@@ -70,18 +86,11 @@ export function App() {
 	})
 	useDefaultImageLabelEditing(apiRef)
 
-	const loadPageIntoCurrentApi = React.useCallback((page: ZoltraakPage) => {
-		const currentApi = apiRef.current
-		if (!currentApi) return
-
-		loadExcalidrawPage(currentApi, page)
-	}, [])
-
 	const syncCurrentPageFromApi = React.useCallback((sourceDocument: ZoltraakDocument) => {
 		const currentApi = apiRef.current
 		if (!currentApi) return sourceDocument
 
-		const scene = sceneFromApi(currentApi, getCurrentPage(sourceDocument))
+		const scene = sceneFromApi(currentApi, sourceDocument)
 
 		return withPageScene(
 			sourceDocument,
@@ -462,6 +471,7 @@ export function App() {
 				<p className="temporary-board-notice" role="status">Browser storage is unavailable. Drawings in this tab will be lost when it closes.</p>
 			)}
 			<Excalidraw
+				key={canvasVersion}
 				excalidrawAPI={setApi}
 				initialData={pageInitialData(currentPage)}
 				onChange={handleChange}

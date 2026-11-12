@@ -1,7 +1,7 @@
 import { CaptureUpdateAction, ROUNDNESS, convertToExcalidrawElements, restoreElements, newElementWith } from '@excalidraw/excalidraw'
 import type { AppState, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import type { ExcalidrawElement, ExcalidrawTextElement } from '@excalidraw/excalidraw/element/types'
-import { getPageFiles, serializeAppState, type ZoltraakPage } from './document'
+import { getCurrentPage, getPageFiles, serializeAppState, type ZoltraakDocument, type ZoltraakPage } from './document'
 
 export const SHAPE_ROUGHNESS = 0.5
 export const RECTANGLE_CORNER_RADIUS = 6.4
@@ -32,14 +32,24 @@ function pageUpdateAppState(page: ZoltraakPage, appState: AppState) {
 	} as Parameters<ExcalidrawImperativeAPI['updateScene']>[0]['appState']
 }
 
-export function sceneFromApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage) {
+export function sceneFromApi(api: ExcalidrawImperativeAPI, document: ZoltraakDocument) {
 	const appState = api.getAppState()
 	const elements = api.getSceneElements().filter((element) => element.id !== appState.pendingImageElementId)
 	return {
 		elements,
 		appState: serializeAppState(appState),
-		files: getPageFiles(elements, api.getFiles(), page),
+		files: getPageFiles(elements, api.getFiles(), getCurrentPage(document), document.pages),
 	}
+}
+
+export function hasConflictingImageCache(page: ZoltraakPage, cachedFiles: BinaryFiles) {
+	return page.elements.some((element) => {
+		if (element.type !== 'image' || element.isDeleted || !element.fileId) return false
+		const cached = cachedFiles[element.fileId]
+		if (!cached) return false
+		const local = page.files[element.fileId]
+		return !local || cached.dataURL !== local.dataURL || cached.mimeType !== local.mimeType
+	})
 }
 
 export function loadPageIntoApi(api: ExcalidrawImperativeAPI, page: ZoltraakPage) {
